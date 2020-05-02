@@ -10,13 +10,6 @@ import (
 	"testing"
 )
 
-const (
-	PASSWORD  = "superrandompassword"
-	TOKEN     = "superrandompasswordtoken"
-	PATH      = "a-random-path"
-	MOUNTPATH = "another-random-path"
-)
-
 var runMock bool = os.Getenv("RUN_MOCK") == "true"
 
 type TestConfig struct {

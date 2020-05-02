@@ -16,6 +16,13 @@ var server *http.Server
 var running bool = false
 var sealStatus bool = false
 
+const (
+	PASSWORD  = "superrandompassword"
+	TOKEN     = "superrandompasswordtoken"
+	PATH      = "a-random-path"
+	MOUNTPATH = "another-random-path"
+)
+
 func StartServer(t *testing.T, address string) {
 	if running {
 		log.Println("Server already running")
