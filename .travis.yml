@@ -18,8 +18,8 @@ before_install:
   - sudo apt-get -y install restic
 
     # installs gocryptfs
-  - curl -LO https://github.com/rfjakob/gocryptfs/releases/download/v1.7.1/gocryptfs_v1.7.1_linux-static_amd64.tar.gz
-  - tar -C /usr/local/bin -xzf gocryptfs_v1.7.1_linux-static_amd64.tar.gz
+  - sudo curl -LO https://github.com/rfjakob/gocryptfs/releases/download/v1.7.1/gocryptfs_v1.7.1_linux-static_amd64.tar.gz
+  - sudo tar -C /usr/local/bin -xzf gocryptfs_v1.7.1_linux-static_amd64.tar.gz
   #- restic self-update
 script:
   - go get -u ./...
