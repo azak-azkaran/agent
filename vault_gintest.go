@@ -17,10 +17,10 @@ var running bool = false
 var sealStatus bool = false
 
 const (
-	PASSWORD  = "superrandompassword"
-	TOKEN     = "superrandompasswordtoken"
-	PATH      = "a-random-path"
-	MOUNTPATH = "another-random-path"
+	VAULT_PASSWORD  = "superrandompassword"
+	VAULT_TOKEN     = "superrandompasswordtoken"
+	VAULT_PATH      = "a-random-path"
+	VAULT_MOUNTPATH = "another-random-path"
 )
 
 func StartServer(t *testing.T, address string) {
@@ -76,8 +76,8 @@ func createHandler() http.Handler {
 		var msg vault.Secret
 		data := make(map[string]interface{})
 		secret := make(map[string]string)
-		secret["path"] = PATH
-		secret["pw"] = PASSWORD
+		secret["path"] = VAULT_PATH
+		secret["pw"] = VAULT_PASSWORD
 		data["data"] = secret
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)
@@ -86,9 +86,9 @@ func createHandler() http.Handler {
 		var msg vault.Secret
 		data := make(map[string]interface{})
 		secret := make(map[string]string)
-		secret["path"] = PATH
-		secret["mount-path"] = MOUNTPATH
-		secret["pw"] = PASSWORD
+		secret["path"] = VAULT_PATH
+		secret["mount-path"] = VAULT_MOUNTPATH
+		secret["pw"] = VAULT_PASSWORD
 		data["data"] = secret
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)

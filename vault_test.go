@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+const (
+	ERROR_VAULT_NOT_UNSEALED = "Vault is not unsealed."
+)
+
 var runMock bool = os.Getenv("RUN_MOCK") == "true"
 
 type TestConfig struct {
@@ -58,7 +62,7 @@ func TestIsSealed(t *testing.T) {
 
 	resp, err := IsSealed(testconfig.config)
 	assert.NoError(t, err)
-	assert.False(t, resp, "Vault is not unsealed")
+	assert.False(t, resp, ERROR_VAULT_NOT_UNSEALED)
 }
 
 func TestGetSecret(t *testing.T) {
@@ -66,7 +70,7 @@ func TestGetSecret(t *testing.T) {
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
-	assert.False(t, seal, "Vault is not unsealed")
+	assert.False(t, seal, ERROR_VAULT_NOT_UNSEALED)
 
 	resp, err := GetSecret(testconfig.config, testconfig.token, "restic/data/"+testconfig.resticpath)
 	assert.NoError(t, err)
@@ -78,7 +82,7 @@ func TestGetGocryptConfig(t *testing.T) {
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
-	assert.False(t, seal, "Vault is not unsealed")
+	assert.False(t, seal, ERROR_VAULT_NOT_UNSEALED)
 
 	conf, err := GetGocryptConfig(testconfig.config, testconfig.token, testconfig.gocryptpath)
 	assert.NoError(t, err)
@@ -92,7 +96,7 @@ func TestGetResticConfig(t *testing.T) {
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
-	assert.False(t, seal, "Vault is not unsealed")
+	assert.False(t, seal, ERROR_VAULT_NOT_UNSEALED)
 
 	conf, err := GetResticConfig(testconfig.config, testconfig.token, testconfig.resticpath)
 	assert.NoError(t, err)
@@ -107,7 +111,7 @@ func TestUnseal(t *testing.T) {
 		return
 	}
 	testconfig := readConfig(t)
-	err := Seal(testconfig.config, TOKEN)
+	err := Seal(testconfig.config, VAULT_TOKEN)
 	require.NoError(t, err)
 
 	seal, err := IsSealed(testconfig.config)
