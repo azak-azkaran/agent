@@ -5,8 +5,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
+)
+
+const (
+	GOCRYPT_TEST_MOUNTPATH = "./test/tmp-mount"
+	GOCRYPT_TEST_FILE      = "./test/tmp-mount/test"
 )
 
 func TestMountGocryptfs(t *testing.T) {
@@ -14,17 +20,20 @@ func TestMountGocryptfs(t *testing.T) {
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
 	require.DirExists(t, "./test/tmp")
-	require.DirExists(t, "./test/tmp-mount")
-	cmd := MountGocryptfs("./test/tmp", "./test/tmp-mount", idletime, "hallo")
+
+	_ = os.Mkdir(GOCRYPT_TEST_MOUNTPATH, 0700)
+	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
+
+	cmd := MountGocryptfs("./test/tmp", GOCRYPT_TEST_MOUNTPATH, idletime, "hallo")
 
 	assert.Equal(t, "/usr/local/bin/gocryptfs -allow_other -i 3s ./test/tmp ./test/tmp-mount", cmd.String())
 	_, err = RunJob(cmd)
 	assert.NoError(t, err)
 
-	require.FileExists(t, "./test/tmp-mount/test")
-	b, err := ioutil.ReadFile("./test/tmp-mount/test") // just pass the file name
+	require.FileExists(t, GOCRYPT_TEST_FILE)
+	b, err := ioutil.ReadFile(GOCRYPT_TEST_FILE) // just pass the file name
 	assert.NoError(t, err)
 	assert.Equal(t, "testfile\n", string(b))
 	time.Sleep(4 * time.Second)
-	assert.NoFileExists(t, "./test/tmp-mount/test")
+	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
 }
