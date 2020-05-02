@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -26,7 +27,10 @@ func TestMountGocryptfs(t *testing.T) {
 
 	cmd := MountGocryptfs("./test/tmp", GOCRYPT_TEST_MOUNTPATH, idletime, "hallo")
 
-	assert.Equal(t, "/usr/local/bin/gocryptfs -allow_other -i 3s ./test/tmp ./test/tmp-mount", cmd.String())
+	assert.Equal(t, "gocryptfs -allow_other -i 3s ./test/tmp ./test/tmp-mount",
+		// clear location of executable
+		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
+
 	_, err = RunJob(cmd)
 	assert.NoError(t, err)
 

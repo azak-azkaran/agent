@@ -22,7 +22,7 @@ func RunJob(cmd *exec.Cmd) (string, error) {
 }
 
 func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string) *exec.Cmd {
-	cmd := exec.Command("/usr/local/bin/gocryptfs", "-allow_other", "-i", duration.String(), cryptoDir, folder)
+	cmd := exec.Command("gocryptfs", "-allow_other", "-i", duration.String(), cryptoDir, folder)
 	cmd.Env = os.Environ()
 	cmd.Stdin = strings.NewReader(pwd)
 	return cmd
