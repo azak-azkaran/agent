@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	BACKUP_FOLDER = "./test/Backup"
-	EXCLUDE_FILE  = "./test/exclude"
+	BACKUP_FOLDER    = "./test/Backup"
+	EXCLUDE_FILE     = "./test/exclude"
+	BACKUP_CONF_FILE = "./test/Backup/config"
 )
 
 func RemoveContents(dir string) error {
@@ -43,7 +44,7 @@ func TestExistsRepo(t *testing.T) {
 	assert.Error(t, err)
 
 	cmd = InitRepo(BACKUP_FOLDER, "hallo")
-	require.NoFileExists(t, BACKUP_FOLDER+"/config")
+	require.NoFileExists(t, BACKUP_CONF_FILE)
 	_, err = RunJob(cmd)
 	assert.NoError(t, err)
 
@@ -52,18 +53,18 @@ func TestExistsRepo(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Println(s)
 	RemoveContents(BACKUP_FOLDER)
-	assert.NoFileExists(t, BACKUP_FOLDER+"/config")
+	assert.NoFileExists(t, BACKUP_CONF_FILE)
 }
 
 func TestInitRepo(t *testing.T) {
 	fmt.Println("running: TestInitRepo")
 	cmd := InitRepo(BACKUP_FOLDER, "hallo")
-	require.NoFileExists(t, BACKUP_FOLDER+"/config")
+	require.NoFileExists(t, BACKUP_CONF_FILE)
 	assert.Contains(t, cmd.String(), "restic init")
 
 	require.DirExists(t, BACKUP_FOLDER)
 	_, err := RunJob(cmd)
 	assert.NoError(t, err)
 	RemoveContents(BACKUP_FOLDER)
-	assert.NoFileExists(t, BACKUP_FOLDER+"/config")
+	assert.NoFileExists(t, BACKUP_CONF_FILE)
 }
