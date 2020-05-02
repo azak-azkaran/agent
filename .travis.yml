@@ -16,6 +16,7 @@ before_install:
     #- go get github.com/mattn/goveralls
   - sudo apt-get update
   - sudo apt-get -y install restic
+  - sudo apt-get -y install gocryptfs
     #- restic self-update
 script:
   - go get -u ./...
