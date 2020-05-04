@@ -17,10 +17,11 @@ var running bool = false
 var sealStatus bool = false
 
 const (
-	VAULT_PASSWORD  = "superrandompassword"
-	VAULT_TOKEN     = "superrandompasswordtoken"
-	VAULT_PATH      = "a-random-path"
-	VAULT_MOUNTPATH = "another-random-path"
+	VAULT_PASSWORD   = "superrandompassword"
+	VAULT_TOKEN      = "superrandompasswordtoken"
+	VAULT_PATH       = "a-random-path"
+	VAULT_MOUNTPATH  = "another-random-path"
+	VAULT_CONFIGPATH = "random-config-path,gocryptpath"
 )
 
 func StartServer(t *testing.T, address string) {
@@ -82,16 +83,29 @@ func createHandler() http.Handler {
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)
 	})
-	r.GET("/v1/gocrypt/data/gocryptpath", func(c *gin.Context) {
+	r.GET("/v1/config/configpath", func(c *gin.Context) {
 		var msg vault.Secret
 		data := make(map[string]interface{})
-		secret := make(map[string]string)
-		secret["path"] = VAULT_PATH
-		secret["mount-path"] = VAULT_MOUNTPATH
-		secret["pw"] = VAULT_PASSWORD
-		data["data"] = secret
+
+		data["restic"] = "resticpath"
+		data["gocryptfs"] = VAULT_CONFIGPATH
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)
 	})
+	r.GET("/v1/gocrypt/data/random-config-path", gocrypt)
+
+	r.GET("/v1/gocrypt/data/gocryptpath", gocrypt)
 	return r
+}
+
+func gocrypt(c *gin.Context) {
+	var msg vault.Secret
+	data := make(map[string]interface{})
+	secret := make(map[string]string)
+	secret["path"] = VAULT_PATH
+	secret["mount-path"] = VAULT_MOUNTPATH
+	secret["pw"] = VAULT_PASSWORD
+	data["data"] = secret
+	msg.Data = data
+	c.JSON(http.StatusOK, msg)
 }

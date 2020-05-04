@@ -10,16 +10,13 @@ import (
 	"testing"
 )
 
-const (
-	ERROR_VAULT_NOT_UNSEALED = "Vault is not unsealed."
-)
-
 var runMock bool = os.Getenv("RUN_MOCK") == "true"
 
 type TestConfig struct {
 	token       string
 	resticpath  string
 	gocryptpath string
+	configpath  string
 	secret      string
 	config      *vault.Config
 }
@@ -40,6 +37,7 @@ func readConfig(t *testing.T) TestConfig {
 		token:       viper.GetString("token"),
 		resticpath:  viper.GetString("resticpath"),
 		gocryptpath: viper.GetString("gocryptpath"),
+		configpath:  viper.GetString("configpath"),
 		secret:      viper.GetString("secret"),
 	}
 
@@ -62,7 +60,7 @@ func TestIsSealed(t *testing.T) {
 
 	resp, err := IsSealed(testconfig.config)
 	assert.NoError(t, err)
-	assert.False(t, resp, ERROR_VAULT_NOT_UNSEALED)
+	assert.False(t, resp, ERROR_VAULT_SEALED)
 }
 
 func TestGetSecret(t *testing.T) {
@@ -70,7 +68,7 @@ func TestGetSecret(t *testing.T) {
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
-	assert.False(t, seal, ERROR_VAULT_NOT_UNSEALED)
+	assert.False(t, seal, ERROR_VAULT_SEALED)
 
 	resp, err := GetSecret(testconfig.config, testconfig.token, "restic/data/"+testconfig.resticpath)
 	assert.NoError(t, err)
@@ -82,7 +80,7 @@ func TestGetGocryptConfig(t *testing.T) {
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
-	assert.False(t, seal, ERROR_VAULT_NOT_UNSEALED)
+	assert.False(t, seal, ERROR_VAULT_SEALED)
 
 	conf, err := GetGocryptConfig(testconfig.config, testconfig.token, testconfig.gocryptpath)
 	assert.NoError(t, err)
@@ -96,12 +94,25 @@ func TestGetResticConfig(t *testing.T) {
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
-	assert.False(t, seal, ERROR_VAULT_NOT_UNSEALED)
+	assert.False(t, seal, ERROR_VAULT_SEALED)
 
 	conf, err := GetResticConfig(testconfig.config, testconfig.token, testconfig.resticpath)
 	assert.NoError(t, err)
 	assert.NotNil(t, conf.path)
 	assert.NotNil(t, conf.password)
+}
+
+func TestGetAgentConfig(t *testing.T) {
+	fmt.Println("running: TestGetAgentConfig")
+	testconfig := readConfig(t)
+	seal, err := IsSealed(testconfig.config)
+	require.NoError(t, err)
+	assert.False(t, seal, ERROR_VAULT_SEALED)
+
+	conf, err := GetAgentConfig(testconfig.config, testconfig.token, testconfig.configpath)
+	require.NoError(t, err)
+	assert.NotNil(t, conf.gocryptfs)
+	assert.NotEmpty(t, conf.gocryptfs)
 }
 
 func TestUnseal(t *testing.T) {

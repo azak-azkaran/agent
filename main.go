@@ -3,15 +3,23 @@ package main
 import (
 	vault "github.com/hashicorp/vault/api"
 	//badger "github.com/dgraph-io/badger/v2"
-	"github.com/robfig/cron/v3"
+	"errors"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 	"syscall"
-	"time"
 )
+
+const (
+	ERROR_VAULT_SEALED = "Vault is sealed."
+)
+
+type Configuration struct {
+	agent   AgentConfig
+	restic  ResticConfig
+	gocrypt []GocryptConfig
+}
 
 func RunJob(cmd *exec.Cmd) (string, error) {
 	out, err := cmd.CombinedOutput()
@@ -21,22 +29,39 @@ func RunJob(cmd *exec.Cmd) (string, error) {
 	return string(out), nil
 }
 
-func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string, allowOther bool) *exec.Cmd {
-	var cmd *exec.Cmd
-	if allowOther {
-		cmd = exec.Command("gocryptfs", "-allow_other", "-i", duration.String(), cryptoDir, folder)
-	} else {
-		cmd = exec.Command("gocryptfs", "-i", duration.String(), cryptoDir, folder)
+func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config) (*Configuration, error) {
+	resp, err := IsSealed(vaultConfig)
+	if err != nil {
+		return nil, err
 	}
-	cmd.Env = os.Environ()
-	cmd.Stdin = strings.NewReader(pwd)
-	return cmd
+	if resp {
+		return nil, errors.New(ERROR_VAULT_SEALED)
+	}
+
+	var config Configuration
+	agent, err := GetAgentConfig(vaultConfig, token, hostname)
+	if err != nil {
+		return nil, err
+	}
+	config.agent = *agent
+
+	restic, err := GetResticConfig(vaultConfig, token, config.agent.restic)
+	if err != nil {
+		return nil, err
+	}
+	config.restic = *restic
+
+	for _, name := range config.agent.gocryptfs {
+		gocrypt, err := GetGocryptConfig(vaultConfig, token, name)
+		if err != nil {
+			return nil, err
+		}
+		config.gocrypt = append(config.gocrypt, *gocrypt)
+	}
+	return &config, nil
 }
 
 func main() {
-	c := cron.New()
-	c.Stop() // Stop the scheduler (does not stop any jobs already running).
-
 	log.Print("Please enter Token: ")
 	password, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err == nil {

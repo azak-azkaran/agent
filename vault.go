@@ -3,7 +3,13 @@ package main
 import (
 	"errors"
 	vault "github.com/hashicorp/vault/api"
+	"strings"
 )
+
+type AgentConfig struct {
+	gocryptfs []string
+	restic    string
+}
 
 type GocryptConfig struct {
 	mountPoint string
@@ -44,15 +50,29 @@ func Unseal(config *vault.Config, key string) (*vault.SealStatusResponse, error)
 func IsSealed(config *vault.Config) (bool, error) {
 	client, err := vault.NewClient(config)
 	if err != nil {
-		return false, err
+		return true, err
 	}
 
 	sys := client.Sys()
 	respones, err := sys.SealStatus()
 	if err != nil {
-		return false, err
+		return true, err
 	}
 	return respones.Sealed, nil
+}
+func GetSecret(config *vault.Config, token string, path string) (*vault.Secret, error) {
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+	client.SetToken(token)
+
+	logical := client.Logical()
+	secret, err := logical.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
 }
 
 func getDataFromSecret(config *vault.Config, token string, path string) (map[string]interface{}, error) {
@@ -60,11 +80,15 @@ func getDataFromSecret(config *vault.Config, token string, path string) (map[str
 	if err != nil {
 		return nil, err
 	}
-	data := secret.Data["data"].(map[string]interface{})
-	if len(data) == 0 {
-		return nil, errors.New("Data of secret with path: " + path + " is empty")
+	if _, ok := secret.Data["data"]; ok {
+		data := secret.Data["data"].(map[string]interface{})
+		if len(data) == 0 {
+			return nil, errors.New("Data of secret with path: " + path + " is empty")
+		}
+		return data, nil
+	} else {
+		return secret.Data, nil
 	}
-	return data, nil
 }
 
 func GetResticConfig(config *vault.Config, token string, path string) (*ResticConfig, error) {
@@ -94,17 +118,15 @@ func GetGocryptConfig(config *vault.Config, token string, path string) (*Gocrypt
 	return &conf, nil
 }
 
-func GetSecret(config *vault.Config, token string, path string) (*vault.Secret, error) {
-	client, err := vault.NewClient(config)
+func GetAgentConfig(config *vault.Config, token string, path string) (*AgentConfig, error) {
+	data, err := getDataFromSecret(config, token, "config/"+path)
 	if err != nil {
 		return nil, err
 	}
-	client.SetToken(token)
 
-	logical := client.Logical()
-	secret, err := logical.Read(path)
-	if err != nil {
-		return nil, err
+	conf := AgentConfig{
+		restic:    data["restic"].(string),
+		gocryptfs: strings.Split(data["gocryptfs"].(string), ","),
 	}
-	return secret, nil
+	return &conf, nil
 }
