@@ -84,9 +84,9 @@ func TestGetGocryptConfig(t *testing.T) {
 
 	conf, err := GetGocryptConfig(testconfig.config, testconfig.token, testconfig.gocryptpath)
 	assert.NoError(t, err)
-	assert.NotNil(t, conf.path)
-	assert.NotNil(t, conf.mountPoint)
-	assert.NotNil(t, conf.password)
+	assert.NotNil(t, conf.Path)
+	assert.NotNil(t, conf.MountPoint)
+	assert.NotNil(t, conf.Password)
 }
 
 func TestGetResticConfig(t *testing.T) {
@@ -98,8 +98,8 @@ func TestGetResticConfig(t *testing.T) {
 
 	conf, err := GetResticConfig(testconfig.config, testconfig.token, testconfig.resticpath)
 	assert.NoError(t, err)
-	assert.NotNil(t, conf.path)
-	assert.NotNil(t, conf.password)
+	assert.NotNil(t, conf.Path)
+	assert.NotNil(t, conf.Password)
 }
 
 func TestGetAgentConfig(t *testing.T) {
@@ -111,8 +111,8 @@ func TestGetAgentConfig(t *testing.T) {
 
 	conf, err := GetAgentConfig(testconfig.config, testconfig.token, testconfig.configpath)
 	require.NoError(t, err)
-	assert.NotNil(t, conf.gocryptfs)
-	assert.NotEmpty(t, conf.gocryptfs)
+	assert.NotNil(t, conf.Gocryptfs)
+	assert.NotEmpty(t, conf.Gocryptfs)
 }
 
 func TestUnseal(t *testing.T) {

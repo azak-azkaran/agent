@@ -6,9 +6,11 @@ import (
 	"errors"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const (
@@ -16,9 +18,9 @@ const (
 )
 
 type Configuration struct {
-	agent   AgentConfig
-	restic  ResticConfig
-	gocrypt []GocryptConfig
+	Agent   AgentConfig
+	Restic  ResticConfig
+	Gocrypt []GocryptConfig
 }
 
 func RunJob(cmd *exec.Cmd) (string, error) {
@@ -43,40 +45,59 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 	if err != nil {
 		return nil, err
 	}
-	config.agent = *agent
+	config.Agent = *agent
 
-	restic, err := GetResticConfig(vaultConfig, token, config.agent.restic)
+	restic, err := GetResticConfig(vaultConfig, token, config.Agent.Restic)
 	if err != nil {
 		return nil, err
 	}
-	config.restic = *restic
+	config.Restic = *restic
 
-	for _, name := range config.agent.gocryptfs {
+	for _, name := range config.Agent.Gocryptfs {
 		gocrypt, err := GetGocryptConfig(vaultConfig, token, name)
 		if err != nil {
 			return nil, err
 		}
-		config.gocrypt = append(config.gocrypt, *gocrypt)
+		gocrypt.AllowOther = true
+		gocrypt.Duration, err = time.ParseDuration("0s")
+		if err != nil {
+			return nil, err
+		}
+		config.Gocrypt = append(config.Gocrypt, *gocrypt)
 	}
 	return &config, nil
 }
 
 func main() {
-	log.Print("Please enter Token: ")
-	password, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err == nil {
-		log.Fatal(err)
-	}
-	token := strings.TrimSpace(string(password))
-	log.Printf("token %s", token)
-
-	resp, err := IsSealed(vault.DefaultConfig())
+	name, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Agent starting on: ", name)
+	log.Print("Please enter Token: ")
+	password, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	token := strings.TrimSpace(string(password))
 
-	log.Println("Check if Vault is unsealed")
-	if resp {
-		log.Println("Vault is sealed")
+	vaultConfig := vault.DefaultConfig()
+	log.Println("Getting Vault configuration for agent: ", name, " from: ", vaultConfig.Address)
+	config, err := GetConfigFromVault(token, name, vaultConfig)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+	cmds, empties, err := MountFolders(config.Gocrypt)
+	if err != nil {
+		log.Fatal(err)
+		panic(err)
+	}
+
+	for i, cmd := range cmds {
+		if empties[i] {
+			log.Println("Running: ", cmd.String())
+			RunJob(&cmd)
+		}
 	}
 }

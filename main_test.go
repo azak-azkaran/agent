@@ -22,7 +22,7 @@ func TestGetConfigFromVault(t *testing.T) {
 
 	config, err := GetConfigFromVault(testconfig.token, testconfig.configpath, testconfig.config)
 	require.NoError(t, err)
-	assert.NotNil(t, config.agent)
-	assert.NotNil(t, config.restic)
-	assert.NotEmpty(t, config.gocrypt)
+	assert.NotNil(t, config.Agent)
+	assert.NotNil(t, config.Restic)
+	assert.NotEmpty(t, config.Gocrypt)
 }

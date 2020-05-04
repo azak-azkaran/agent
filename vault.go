@@ -4,22 +4,25 @@ import (
 	"errors"
 	vault "github.com/hashicorp/vault/api"
 	"strings"
+	"time"
 )
 
 type AgentConfig struct {
-	gocryptfs []string
-	restic    string
+	Gocryptfs []string
+	Restic    string
 }
 
 type GocryptConfig struct {
-	mountPoint string
-	path       string
-	password   string
+	MountPoint string
+	Path       string
+	Password   string
+	AllowOther bool
+	Duration   time.Duration
 }
 
 type ResticConfig struct {
-	password string
-	path     string
+	Password string
+	Path     string
 }
 
 func Seal(config *vault.Config, token string) error {
@@ -98,8 +101,8 @@ func GetResticConfig(config *vault.Config, token string, path string) (*ResticCo
 	}
 
 	conf := ResticConfig{
-		path:     data["path"].(string),
-		password: data["pw"].(string),
+		Path:     data["path"].(string),
+		Password: data["pw"].(string),
 	}
 	return &conf, nil
 }
@@ -111,9 +114,9 @@ func GetGocryptConfig(config *vault.Config, token string, path string) (*Gocrypt
 	}
 
 	conf := GocryptConfig{
-		mountPoint: data["mount-path"].(string),
-		path:       data["path"].(string),
-		password:   data["pw"].(string),
+		MountPoint: data["mount-path"].(string),
+		Path:       data["path"].(string),
+		Password:   data["pw"].(string),
 	}
 	return &conf, nil
 }
@@ -125,8 +128,8 @@ func GetAgentConfig(config *vault.Config, token string, path string) (*AgentConf
 	}
 
 	conf := AgentConfig{
-		restic:    data["restic"].(string),
-		gocryptfs: strings.Split(data["gocryptfs"].(string), ","),
+		Restic:    data["restic"].(string),
+		Gocryptfs: strings.Split(data["gocryptfs"].(string), ","),
 	}
 	return &conf, nil
 }
