@@ -10,25 +10,28 @@ import (
 	"time"
 )
 
-func MountFolders(config []GocryptConfig) ([]exec.Cmd, []bool, error) {
-	var cmds []exec.Cmd
-	var empties []bool
+func MountFolders(config []GocryptConfig, function func(*exec.Cmd) (string, error)) ([]string, error) {
 	var returnErr error
+	var output []string
 	for i, folderconfig := range config {
 		log.Println("Mounting: ", i, " with name: ", AbsolutePath(folderconfig.MountPoint))
 		cmd := MountGocryptfs(folderconfig.Path, folderconfig.MountPoint, folderconfig.Duration, folderconfig.Password, folderconfig.AllowOther)
 		empty, err := IsEmpty(folderconfig.MountPoint)
-		if err == nil {
-			cmds = append(cmds, *cmd)
-			empties = append(empties, empty)
-		} else {
+		if err != nil {
 			returnErr = err
-		}
-		if !empty {
-			log.Println(AbsolutePath(folderconfig.MountPoint), ": was not empty")
+		} else {
+			if !empty {
+				log.Println(AbsolutePath(folderconfig.MountPoint), ": was not empty")
+			} else {
+				out, err := function(cmd)
+				if err != nil {
+					return output, err
+				}
+				output = append(output, out)
+			}
 		}
 	}
-	return cmds, empties, returnErr
+	return output, returnErr
 }
 
 func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string, allowOther bool) *exec.Cmd {

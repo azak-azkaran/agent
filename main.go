@@ -88,16 +88,12 @@ func main() {
 		log.Fatal(err)
 		panic(err)
 	}
-	cmds, empties, err := MountFolders(config.Gocrypt)
+	out, err := MountFolders(config.Gocrypt, RunJob)
 	if err != nil {
 		log.Fatal(err)
 		panic(err)
 	}
-
-	for i, cmd := range cmds {
-		if empties[i] {
-			log.Println("Running: ", cmd.String())
-			RunJob(&cmd)
-		}
+	for o := range out {
+		log.Println(o)
 	}
 }

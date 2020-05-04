@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,9 @@ const (
 	GOCRYPT_TEST_FILE      = "./test/tmp-mount/test"
 	GOCRYPT_TEST_FOLDER    = "./test/tmp"
 )
+
+var testRun *testing.T
+var count int = 0
 
 func TestMountGocryptfs(t *testing.T) {
 	fmt.Println("running: TestMountGocryptfs")
@@ -61,17 +65,24 @@ func TestMountFolders(t *testing.T) {
 		Duration:   idletime,
 	}
 	var configs []GocryptConfig
-	configs = append(configs, config)
+	configs = append(configs, config, config)
 
-	cmds, empties, err := MountFolders(configs)
-	require.NoError(t, err)
-	assert.Len(t, cmds, 1)
-	assert.Len(t, empties, 1)
+	testRun = t
+	out, err := MountFolders(configs, CheckCmd)
+	assert.NoError(t, err)
+	assert.Len(t, out, 2)
+}
 
-	assert.Equal(t, "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
+func CheckCmd(cmd *exec.Cmd) (string, error) {
+	count++
+	b := assert.Equal(testRun, "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
 		// clear location of executable
-		strings.TrimPrefix(strings.TrimPrefix(cmds[0].String(), "/usr/local/bin/"), "/usr/bin/"))
-	assert.True(t, empties[0])
+		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
+	if b {
+		return "pass", nil
+	} else {
+		return "fail", nil
+	}
 }
 
 func TestAbsolutePath(t *testing.T) {
