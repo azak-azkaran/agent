@@ -2,9 +2,10 @@ package main
 
 import (
 	"errors"
-	vault "github.com/hashicorp/vault/api"
 	"strings"
 	"time"
+
+	vault "github.com/hashicorp/vault/api"
 )
 
 type AgentConfig struct {

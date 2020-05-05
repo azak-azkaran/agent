@@ -1,11 +1,69 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+type TokenMessage struct {
+	token string
+}
+
+func postSeal(c *gin.Context) {
+	var msg TokenMessage
+	err := c.BindJSON(msg)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	AgentConfiguration.Token = msg.token
+	err = Seal(AgentConfiguration.VaultConfig, AgentConfiguration.Token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	AgentConfiguration.Token = msg.token
+	c.JSON(http.StatusOK, gin.H{
+		"message": true,
+	})
+}
+
+func postAddToken(c *gin.Context) {
+	var msg TokenMessage
+	err := c.BindJSON(msg)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	AgentConfiguration.Token = msg.token
+	c.JSON(http.StatusOK, gin.H{
+		"message": "",
+	})
+}
+
+func getIsSealed(c *gin.Context) {
+	bool, err := IsSealed(AgentConfiguration.VaultConfig)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": bool,
+	})
+}
 
 func RunRestServer(address string) *http.Server {
 	server := &http.Server{
@@ -33,20 +91,9 @@ func CreateRestHandler() http.Handler {
 		})
 	})
 
-	r.PUT("/unseal", func(c *gin.Context) {
-
-	})
-
-	r.GET("/is_sealed", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "",
-		})
-	})
-
-	r.PUT("/add_token", func(c *gin.Context) {
-
-	})
-
+	r.POST("/seal", postSeal)
+	r.GET("/is_sealed", getIsSealed)
+	r.POST("/add_token", postAddToken)
 	r.GET("/status", func(c *gin.Context) {
 
 	})

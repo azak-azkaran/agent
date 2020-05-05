@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -52,7 +53,8 @@ func TestExistsRepo(t *testing.T) {
 	s, err := RunJob(cmd)
 	assert.NoError(t, err)
 	fmt.Println(s)
-	RemoveContents(BACKUP_FOLDER)
+	err = RemoveContents(BACKUP_FOLDER)
+	assert.NoError(t, err)
 	assert.NoFileExists(t, BACKUP_CONF_FILE)
 }
 
@@ -65,6 +67,7 @@ func TestInitRepo(t *testing.T) {
 	require.DirExists(t, BACKUP_FOLDER)
 	_, err := RunJob(cmd)
 	assert.NoError(t, err)
-	RemoveContents(BACKUP_FOLDER)
+	err = RemoveContents(BACKUP_FOLDER)
+	assert.NoError(t, err)
 	assert.NoFileExists(t, BACKUP_CONF_FILE)
 }

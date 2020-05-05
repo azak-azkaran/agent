@@ -4,12 +4,14 @@ import (
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
 	//badger "github.com/dgraph-io/badger/v2"
 	"errors"
 	//"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
 	"os/exec"
+
 	//"strings"
 	//"syscall"
 	"time"
@@ -28,6 +30,7 @@ type Configuration struct {
 	VaultConfig *vault.Config
 	Hostname    string
 	Address     string
+	Token       string
 }
 
 func RunJob(cmd *exec.Cmd) (string, error) {
@@ -42,8 +45,14 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend := pflag.NewFlagSet("address", pflag.ContinueOnError)
 	addressCommend.String("address", "localhost:8081", "the addess on which rest server of the agent is startet")
 	viper.SetEnvPrefix("agent")
-	viper.BindEnv("address")
-	viper.BindPFlags(pflag.CommandLine)
+	err := viper.BindEnv("address")
+	if err != nil {
+		return err
+	}
+	err = viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		return err
+	}
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -54,7 +63,11 @@ func Init(vaultConfig *vault.Config, args []string) error {
 		VaultConfig: vaultConfig,
 		Hostname:    hostname,
 	}
-	addressCommend.Parse(args)
+	err = addressCommend.Parse(args)
+	if err != nil {
+		return err
+	}
+
 	if viper.IsSet("address") {
 		AgentConfiguration.Address = viper.GetString("address")
 	} else {
@@ -107,20 +120,21 @@ func main() {
 		log.Fatal("Error: ", err)
 	}
 	RunRestServer("localhost:8081")
+
 	//token := strings.TrimSpace(string(password))
 
 	//log.Println("Getting Vault configuration for agent: ", name, " from: ", vaultConfig.Address)
 	//config, err := GetConfigFromVault(token, name, vaultConfig)
 	//if err != nil {
-	//	log.Fatal(err)
-	//	panic(err)
+	//  log.Fatal(err)
+	//  panic(err)
 	//}
 	//out, err := MountFolders(config.Gocrypt, RunJob)
 	//if err != nil {
-	//	log.Fatal(err)
-	//	panic(err)
+	//  log.Fatal(err)
+	//  panic(err)
 	//}
 	//for o := range out {
-	//	log.Println(o)
+	//  log.Println(o)
 	//}
 }

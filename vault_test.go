@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 )
 
 var runMock bool = os.Getenv("RUN_MOCK") == "true"
