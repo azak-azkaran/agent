@@ -4,8 +4,13 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"os/exec"
 	"testing"
+)
+
+const (
+	MAIN_TEST_ADDRESS = "localhost:8081"
 )
 
 func TestRunCmd(t *testing.T) {
@@ -25,4 +30,29 @@ func TestGetConfigFromVault(t *testing.T) {
 	assert.NotNil(t, config.Agent)
 	assert.NotNil(t, config.Restic)
 	assert.NotEmpty(t, config.Gocrypt)
+}
+
+func TestInit(t *testing.T) {
+	fmt.Println("running: TestInitWithEnvironment")
+	testconfig := readConfig(t)
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	// Test with flags
+	os.Args = append(os.Args, "--address="+MAIN_TEST_ADDRESS)
+	err = Init(testconfig.config, os.Args[2:])
+	require.NoError(t, err)
+	assert.Equal(t, AgentConfiguration.Hostname, hostname)
+	assert.Equal(t, AgentConfiguration.Address, MAIN_TEST_ADDRESS)
+	length := len(os.Args)
+
+	os.Args = os.Args[:length-1]
+
+	// Test with Environment variables
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
+	err = Init(testconfig.config, os.Args[2:])
+	require.NoError(t, err)
+	assert.Equal(t, AgentConfiguration.Hostname, hostname)
+	assert.Equal(t, AgentConfiguration.Address, MAIN_TEST_ADDRESS)
+
 }
