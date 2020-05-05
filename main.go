@@ -73,7 +73,11 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 	}
 
 	var config Configuration
-
+	agent, err := GetAgentConfig(vaultConfig, token, hostname)
+	if err != nil {
+		return nil, err
+	}
+	config.Agent = *agent
 	restic, err := GetResticConfig(vaultConfig, token, config.Agent.Restic)
 	if err != nil {
 		return nil, err
