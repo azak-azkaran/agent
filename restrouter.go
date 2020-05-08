@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"net/http"
 
@@ -9,8 +8,16 @@ import (
 )
 
 const (
-	ERROR_PREFIX = "ERROR: "
-	JSON_MESSAGE = "message"
+	ERROR_ISSEALED  = "IsSealed:"
+	ERROR_UNSEAL    = "Unseal:"
+	ERROR_SEAL      = "Seal:"
+	ERROR_RUNEXISTS = "RunExistsRepoJob:"
+	ERROR_RUNBACKUP = "RunBackupJob:"
+	ERROR_ENQUEUE   = "Enqueue:"
+	ERROR_CONFIG    = "GetConfigFromVault:"
+	ERROR_BINDING   = "BindJSON:"
+	ERROR_PREFIX    = "ERROR: "
+	JSON_MESSAGE    = "message"
 )
 
 type TokenMessage struct {
@@ -28,23 +35,24 @@ type MountMessage struct {
 	Token string `json:"token" binding:"required"`
 }
 
+func returnErr(err error, source string, c *gin.Context) {
+	log.Println(ERROR_PREFIX+source, err.Error())
+	c.JSON(http.StatusBadRequest, gin.H{
+		JSON_MESSAGE: err.Error(),
+	})
+}
+
 func postUnseal(c *gin.Context) {
 	var msg TokenMessage
 	err := c.BindJSON(&msg)
 	if err != nil {
-		log.Println(ERROR_PREFIX+"BindJSON:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
 	resp, err := Unseal(AgentConfiguration.VaultConfig, msg.Token)
 	if err != nil {
-		log.Println(ERROR_PREFIX+"Unseal:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_UNSEAL, c)
 		return
 	}
 
@@ -58,19 +66,13 @@ func postSeal(c *gin.Context) {
 	var msg TokenMessage
 	err := c.BindJSON(&msg)
 	if err != nil {
-		log.Println(ERROR_PREFIX+"BindJSON:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 	AgentConfiguration.Token = msg.Token
 	err = Seal(AgentConfiguration.VaultConfig, AgentConfiguration.Token)
 	if err != nil {
-		log.Println(ERROR_PREFIX+"Seal:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_SEAL, c)
 		return
 	}
 
@@ -84,10 +86,7 @@ func postSeal(c *gin.Context) {
 func getIsSealed(c *gin.Context) {
 	b, err := IsSealed(AgentConfiguration.VaultConfig)
 	if err != nil {
-		log.Println(ERROR_PREFIX+"IsSealed: ", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_ISSEALED, c)
 		return
 	}
 
@@ -132,17 +131,13 @@ func postMount(c *gin.Context) {
 	var msg *MountMessage
 	err := c.BindJSON(&msg)
 	if err != nil {
-		log.Println(ERROR_PREFIX+"BindJSON:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_PREFIX, c)
 		return
 	}
 
 	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil || config.Agent.Gocryptfs == nil {
-		log.Println(JSON_MESSAGE + "Config missing")
-		c.JSON(http.StatusBadRequest, gin.H{JSON_MESSAGE: errors.New("Config missing").Error()})
+		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
 
@@ -162,17 +157,13 @@ func postInitBackupt(c *gin.Context) {
 	var msg *BackupMessage
 	err := c.BindJSON(&msg)
 	if err != nil {
-		log.Println("ERROR: BindJSON:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_PREFIX, c)
 		return
 	}
 
 	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil || config.Restic == nil {
-		log.Println(ERROR_PREFIX + "Config missing")
-		c.JSON(http.StatusBadRequest, gin.H{JSON_MESSAGE: errors.New("Config missing").Error()})
+		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
 
@@ -193,17 +184,13 @@ func postBackup(c *gin.Context) {
 	var msg *BackupMessage
 	err := c.BindJSON(&msg)
 	if err != nil {
-		log.Println("ERROR: BindJSON:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		returnErr(err, ERROR_PREFIX, c)
 		return
 	}
 
 	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil || config.Restic == nil {
-		log.Println(ERROR_PREFIX + "Config missing")
-		c.JSON(http.StatusBadRequest, gin.H{JSON_MESSAGE: errors.New("Config missing").Error()})
+		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
 
@@ -211,14 +198,12 @@ func postBackup(c *gin.Context) {
 	if msg.Run {
 		exists_out, err := RunJob(cmd)
 		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{JSON_MESSAGE: err.Error()})
+			returnErr(err, ERROR_RUNEXISTS, c)
 			return
 		}
 		err = ConcurrentQueue.Enqueue(exists_out)
 		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{JSON_MESSAGE: err.Error()})
+			returnErr(err, ERROR_ENQUEUE, c)
 			return
 		}
 	}
@@ -231,8 +216,7 @@ func postBackup(c *gin.Context) {
 		)
 		err = ConcurrentQueue.Enqueue(cmd)
 		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{JSON_MESSAGE: err.Error()})
+			returnErr(err, ERROR_ENQUEUE, c)
 			return
 		}
 	case "backup":
@@ -246,8 +230,7 @@ func postBackup(c *gin.Context) {
 
 		err = ConcurrentQueue.Enqueue(cmd)
 		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{JSON_MESSAGE: err.Error()})
+			returnErr(err, ERROR_ENQUEUE, c)
 			return
 		}
 	}
@@ -255,11 +238,13 @@ func postBackup(c *gin.Context) {
 	if msg.Run {
 		backup_out, err := RunJob(cmd)
 		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
+			returnErr(err, ERROR_RUNBACKUP, c)
+			return
 		}
 		err = ConcurrentQueue.Enqueue(backup_out)
 		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
+			returnErr(err, ERROR_ENQUEUE, c)
+			return
 		}
 	}
 }
