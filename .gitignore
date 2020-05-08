@@ -15,5 +15,8 @@ agent
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# cover files
+cover.html
+report.json
 
 test/secret.yml

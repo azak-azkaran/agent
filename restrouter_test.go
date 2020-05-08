@@ -38,6 +38,10 @@ func TestCreateRestHandler(t *testing.T) {
 		assert.Equal(t, http.ErrServerClosed, err)
 	}()
 
+	if ConcurrentQueue.GetLen() > 0 {
+		_, err := ConcurrentQueue.Dequeue()
+		assert.NoError(t, err)
+	}
 	err := server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
@@ -60,6 +64,10 @@ func TestRunRestServer(t *testing.T) {
 	bodyStr := strings.TrimSpace(string(body))
 	assert.Equal(t, bodyStr, "{\"message\":\"pong\"}")
 
+	if ConcurrentQueue.GetLen() > 0 {
+		_, err = ConcurrentQueue.Dequeue()
+		assert.NoError(t, err)
+	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
@@ -120,6 +128,10 @@ func TestHandleSeal(t *testing.T) {
 	bodyStr = strings.TrimSpace(string(body))
 	assert.Equal(t, bodyStr, "{\"message\":false}")
 
+	if ConcurrentQueue.GetLen() > 0 {
+		_, err = ConcurrentQueue.Dequeue()
+		assert.NoError(t, err)
+	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
@@ -129,64 +141,88 @@ func TestPostBackup(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	backupMsg := BackupMessage{
-		Mode: "backup",
-		Run:  false,
-	}
-	msg := TokenMessage{
+		Mode:  "backup",
+		Run:   false,
 		Token: "randomtoken",
 	}
-
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 	log.Println("Agent rest server startet on: ", server.Addr)
 
-	reqBody, err := json.Marshal(msg)
-	require.NoError(t, err)
-
-	_, err = http.Post("http://localhost:8081/config",
-		"application/json", bytes.NewBuffer(reqBody))
-	require.NoError(t, err)
-
-	reqBody, err = json.Marshal(backupMsg)
+	reqBody, err := json.Marshal(backupMsg)
 	require.NoError(t, err)
 
 	resp, err := http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.NotEmpty(t, ConcurrentQueue)
+
+	backupMsg = BackupMessage{
+		Mode: "check",
+		Run:  true,
+	}
+	reqBody, err = json.Marshal(backupMsg)
+	require.NoError(t, err)
+
+	resp, err = http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = http.Post("http://localhost:8081/initbackup",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	time.Sleep(1 * time.Millisecond)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	assert.NotEmpty(t, ConcurrentQueue)
+	assert.EqualValues(t, ConcurrentQueue.GetLen(), 5)
+
+	if ConcurrentQueue.GetLen() > 0 {
+		_, err = ConcurrentQueue.Dequeue()
+		assert.NoError(t, err)
+	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
+
+	err = RemoveContents(BACKUP_FOLDER)
+	assert.NoError(t, err)
+	assert.NoFileExists(t, BACKUP_CONF_FILE)
 }
+
 func TestPostMount(t *testing.T) {
 	fmt.Println("running: TestPostMount")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	mountMsg := MountMessage{
-		Run: false,
-	}
-	msg := TokenMessage{
+		Run:   false,
 		Token: "randomtoken",
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 	log.Println("Agent rest server startet on: ", server.Addr)
-	reqBody, err := json.Marshal(msg)
+	reqBody, err := json.Marshal(mountMsg)
 	require.NoError(t, err)
 
-	_, err = http.Post("http://localhost:8081/config",
-		"application/json", bytes.NewBuffer(reqBody))
-	require.NoError(t, err)
-
-	reqBody, err = json.Marshal(mountMsg)
-	require.NoError(t, err)
-
-	resp, err := http.Post("http://localhost:8081/backup",
+	resp, err := http.Post("http://localhost:8081/mount",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	if ConcurrentQueue.GetLen() > 0 {
+		_, err = ConcurrentQueue.Dequeue()
+		assert.NoError(t, err)
+	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }

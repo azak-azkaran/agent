@@ -22,10 +22,10 @@ before_install:
   - sudo tar -C /usr/local/bin -xzf gocryptfs_v1.7.1_linux-static_amd64.tar.gz
   #- restic self-update
 script:
-  - go get -u ./...
-  #- make coverage
+  #- go get -u ./...
+  - make coverage
   # other script steps might be done before running the actual analysis
-  - go test -coverprofile=cover.out
-  - go test -json > report.json
+  #- go test -coverprofile=cover.out
+  #- go test -json > report.json
     #- $GOPATH/bin/goveralls -service=travis-ci
   - sonar-scanner
