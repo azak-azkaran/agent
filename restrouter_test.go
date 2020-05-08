@@ -142,7 +142,7 @@ func TestPostBackup(t *testing.T) {
 	server, fun := RunRestServer("localhost:8081")
 	backupMsg := BackupMessage{
 		Mode:  "backup",
-		Run:   false,
+		Run:   true,
 		Token: "randomtoken",
 	}
 	go fun()
@@ -156,13 +156,12 @@ func TestPostBackup(t *testing.T) {
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
 	assert.NotEmpty(t, ConcurrentQueue)
 
 	backupMsg = BackupMessage{
-		Mode: "check",
-		Run:  true,
+		Mode: "init",
 	}
 	reqBody, err = json.Marshal(backupMsg)
 	require.NoError(t, err)
@@ -170,13 +169,24 @@ func TestPostBackup(t *testing.T) {
 	resp, err = http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	resp, err = http.Post("http://localhost:8081/initbackup",
+	backupMsg = BackupMessage{
+		Mode: "exist",
+	}
+	reqBody, err = json.Marshal(backupMsg)
+	require.NoError(t, err)
+	resp, err = http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Millisecond)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	backupMsg = BackupMessage{
+		Mode: "backup",
+	}
+	reqBody, err = json.Marshal(backupMsg)
+	require.NoError(t, err)
 
 	resp, err = http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
@@ -184,7 +194,7 @@ func TestPostBackup(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.NotEmpty(t, ConcurrentQueue)
-	assert.EqualValues(t, ConcurrentQueue.GetLen(), 5)
+	assert.EqualValues(t, ConcurrentQueue.GetLen(), 4)
 
 	if ConcurrentQueue.GetLen() > 0 {
 		_, err = ConcurrentQueue.Dequeue()
@@ -203,7 +213,7 @@ func TestPostMount(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	mountMsg := MountMessage{
-		Run:   false,
+		Run:   true,
 		Token: "randomtoken",
 	}
 	go fun()

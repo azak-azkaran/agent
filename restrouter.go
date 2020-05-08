@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os/exec"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,7 +12,6 @@ const (
 	ERROR_ISSEALED  = "IsSealed:"
 	ERROR_UNSEAL    = "Unseal:"
 	ERROR_SEAL      = "Seal:"
-	ERROR_RUNEXISTS = "RunExistsRepoJob:"
 	ERROR_RUNBACKUP = "RunBackupJob:"
 	ERROR_ENQUEUE   = "Enqueue:"
 	ERROR_CONFIG    = "GetConfigFromVault:"
@@ -37,7 +37,7 @@ type MountMessage struct {
 
 func returnErr(err error, source string, c *gin.Context) {
 	log.Println(ERROR_PREFIX+source, err.Error())
-	c.JSON(http.StatusBadRequest, gin.H{
+	c.JSON(http.StatusInternalServerError, gin.H{
 		JSON_MESSAGE: err.Error(),
 	})
 }
@@ -153,33 +153,6 @@ func postMount(c *gin.Context) {
 	}
 }
 
-func postInitBackupt(c *gin.Context) {
-	var msg *BackupMessage
-	err := c.BindJSON(&msg)
-	if err != nil {
-		returnErr(err, ERROR_PREFIX, c)
-		return
-	}
-
-	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
-	if err != nil || config.Restic == nil {
-		returnErr(err, ERROR_CONFIG, c)
-		return
-	}
-
-	cmd := InitRepo(config.Restic.Path, config.Restic.Password)
-	if msg.Run {
-		exists_out, err := RunJob(cmd)
-		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-		}
-		err = ConcurrentQueue.Enqueue(exists_out)
-		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-		}
-	}
-}
-
 func postBackup(c *gin.Context) {
 	var msg *BackupMessage
 	err := c.BindJSON(&msg)
@@ -194,21 +167,22 @@ func postBackup(c *gin.Context) {
 		return
 	}
 
-	cmd := ExistsRepo(config.Restic.Path, config.Restic.Password)
-	if msg.Run {
-		exists_out, err := RunJob(cmd)
-		if err != nil {
-			returnErr(err, ERROR_RUNEXISTS, c)
-			return
-		}
-		err = ConcurrentQueue.Enqueue(exists_out)
+	var cmd *exec.Cmd
+	switch msg.Mode {
+	case "init":
+		cmd := InitRepo(config.Restic.Path, config.Restic.Password)
+		err = ConcurrentQueue.Enqueue(cmd)
 		if err != nil {
 			returnErr(err, ERROR_ENQUEUE, c)
 			return
 		}
-	}
-
-	switch msg.Mode {
+	case "exist":
+		cmd = ExistsRepo(config.Restic.Path, config.Restic.Password)
+		err = ConcurrentQueue.Enqueue(cmd)
+		if err != nil {
+			returnErr(err, ERROR_ENQUEUE, c)
+			return
+		}
 	case "check":
 
 		cmd = CheckRepo(config.Restic.Path,
@@ -276,7 +250,6 @@ func CreateRestHandler() http.Handler {
 	r.POST("/seal", postSeal)
 	r.POST("/mount", postMount)
 	r.POST("/backup", postBackup)
-	r.POST("/initbackup", postInitBackupt)
 	r.GET("/is_sealed", getIsSealed)
 	r.GET("/status", getStatus)
 	return r
