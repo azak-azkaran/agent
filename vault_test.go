@@ -34,6 +34,9 @@ func readConfig(t *testing.T) TestConfig {
 	viper.AddConfigPath("test")
 	require.NoError(t, viper.ReadInConfig())
 
+	name, err := os.Hostname()
+	require.NoError(t, err)
+	Hostname = name
 	conf := TestConfig{
 		token:       viper.GetString("token"),
 		resticpath:  viper.GetString("resticpath"),

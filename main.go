@@ -5,16 +5,13 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	//badger "github.com/dgraph-io/badger/v2"
 	"errors"
-	//"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
 	"os/exec"
-
-	//"strings"
-	//"syscall"
 	"time"
+
+	cqueue "github.com/enriquebris/goconcurrentqueue"
 )
 
 const (
@@ -22,10 +19,11 @@ const (
 )
 
 var AgentConfiguration Configuration
+var ConcurrentQueue *cqueue.FIFO
 
 type Configuration struct {
-	Agent       AgentConfig
-	Restic      ResticConfig
+	Agent       *AgentConfig
+	Restic      *ResticConfig
 	Gocrypt     []GocryptConfig
 	VaultConfig *vault.Config
 	Hostname    string
@@ -42,6 +40,7 @@ func RunJob(cmd *exec.Cmd) (string, error) {
 }
 
 func Init(vaultConfig *vault.Config, args []string) error {
+	ConcurrentQueue = cqueue.NewFIFO()
 	addressCommend := pflag.NewFlagSet("address", pflag.ContinueOnError)
 	addressCommend.String("address", "localhost:8081", "the addess on which rest server of the agent is startet")
 	viper.SetEnvPrefix("agent")
@@ -90,12 +89,12 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 	if err != nil {
 		return nil, err
 	}
-	config.Agent = *agent
+	config.Agent = agent
 	restic, err := GetResticConfig(vaultConfig, token, config.Agent.Restic)
 	if err != nil {
 		return nil, err
 	}
-	config.Restic = *restic
+	config.Restic = restic
 
 	for _, name := range config.Agent.Gocryptfs {
 		gocrypt, err := GetGocryptConfig(vaultConfig, token, name)
@@ -113,15 +112,16 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 }
 
 func main() {
-	err := Init(vault.DefaultConfig(), os.Args[2:])
+	err := Init(vault.DefaultConfig(), os.Args)
 	//log.Print("Please enter Token: ")
 	//password, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	RunRestServer("localhost:8081")
+	_, fun := RunRestServer("localhost:8081")
 
 	//token := strings.TrimSpace(string(password))
+	fun()
 
 	//log.Println("Getting Vault configuration for agent: ", name, " from: ", vaultConfig.Address)
 	//config, err := GetConfigFromVault(token, name, vaultConfig)

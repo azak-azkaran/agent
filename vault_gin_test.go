@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	vault "github.com/hashicorp/vault/api"
-	"github.com/stretchr/testify/require"
 	"log"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	vault "github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
 
 var server *http.Server
@@ -23,6 +24,8 @@ const (
 	VAULT_MOUNTPATH  = "another-random-path"
 	VAULT_CONFIGPATH = "random-config-path,gocryptpath"
 )
+
+var Hostname string
 
 func StartServer(t *testing.T, address string) {
 	if running {
@@ -83,17 +86,9 @@ func createHandler() http.Handler {
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)
 	})
-	r.GET("/v1/config/configpath", func(c *gin.Context) {
-		var msg vault.Secret
-		data := make(map[string]interface{})
-
-		data["restic"] = "resticpath"
-		data["gocryptfs"] = VAULT_CONFIGPATH
-		msg.Data = data
-		c.JSON(http.StatusOK, msg)
-	})
+	r.GET("/v1/config/"+Hostname, config)
+	r.GET("/v1/config/configpath", config)
 	r.GET("/v1/gocrypt/data/random-config-path", gocrypt)
-
 	r.GET("/v1/gocrypt/data/gocryptpath", gocrypt)
 	return r
 }
@@ -106,6 +101,16 @@ func gocrypt(c *gin.Context) {
 	secret["mount-path"] = VAULT_MOUNTPATH
 	secret["pw"] = VAULT_PASSWORD
 	data["data"] = secret
+	msg.Data = data
+	c.JSON(http.StatusOK, msg)
+}
+
+func config(c *gin.Context) {
+	var msg vault.Secret
+	data := make(map[string]interface{})
+
+	data["restic"] = "resticpath"
+	data["gocryptfs"] = VAULT_CONFIGPATH
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)
 }

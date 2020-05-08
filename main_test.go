@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -54,5 +55,5 @@ func TestInit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, AgentConfiguration.Hostname, hostname)
 	assert.Equal(t, AgentConfiguration.Address, MAIN_TEST_ADDRESS)
-
+	assert.NotNil(t, ConcurrentQueue)
 }

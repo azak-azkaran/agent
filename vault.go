@@ -22,8 +22,9 @@ type GocryptConfig struct {
 }
 
 type ResticConfig struct {
-	Password string
-	Path     string
+	Password    string
+	Path        string
+	ExcludePath string
 }
 
 func Seal(config *vault.Config, token string) error {

@@ -18,7 +18,6 @@ func InitRepo(repo string, pwd string) *exec.Cmd {
 		RESTIC_REPOSITORY+repo,
 		RESTIC_PASSWORD+pwd,
 	)
-	//cmd.Stdin = strings.NewReader(pwd)
 	return cmd
 }
 
