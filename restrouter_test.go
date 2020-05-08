@@ -22,7 +22,7 @@ func setupRestrouterTest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
 	os.Setenv("AGENT_ADDRESS", testconfig.config.Address)
-	err := Init(testconfig.config, os.Args[2:])
+	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 }
 
@@ -156,4 +156,37 @@ func TestPostBackup(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.NotEmpty(t, ConcurrentQueue)
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+func TestPostMount(t *testing.T) {
+	fmt.Println("running: TestPostMount")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer("localhost:8081")
+	mountMsg := MountMessage{
+		Run: false,
+	}
+	msg := TokenMessage{
+		Token: "randomtoken",
+	}
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	log.Println("Agent rest server startet on: ", server.Addr)
+	reqBody, err := json.Marshal(msg)
+	require.NoError(t, err)
+
+	_, err = http.Post("http://localhost:8081/config",
+		"application/json", bytes.NewBuffer(reqBody))
+	require.NoError(t, err)
+
+	reqBody, err = json.Marshal(mountMsg)
+	require.NoError(t, err)
+
+	resp, err := http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
 }

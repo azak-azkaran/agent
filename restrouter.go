@@ -74,23 +74,6 @@ func postSeal(c *gin.Context) {
 	})
 }
 
-func postAddToken(c *gin.Context) {
-	var msg TokenMessage
-	err := c.BindJSON(&msg)
-	if err != nil {
-		log.Println("ERROR: BindJSON:", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
-	AgentConfiguration.Token = msg.Token
-	log.Println("INFO: Token added")
-	c.JSON(http.StatusOK, gin.H{
-		"message": "",
-	})
-}
-
 func getIsSealed(c *gin.Context) {
 	b, err := IsSealed(AgentConfiguration.VaultConfig)
 	if err != nil {
@@ -269,7 +252,6 @@ func CreateRestHandler() http.Handler {
 	r.POST("/mount", postMount)
 	r.POST("/backup", postBackup)
 	r.GET("/is_sealed", getIsSealed)
-	r.POST("/add_token", postAddToken)
 	r.GET("/status", getStatus)
 	r.POST("/config", postConfig)
 	return r
