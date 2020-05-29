@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"log"
 	"net/http"
 	"os/exec"
@@ -9,6 +11,9 @@ import (
 )
 
 const (
+	ERROR_MODE      = "Backup Mode:"
+	ERROR_STATUS    = "GetStatus:"
+	ERROR_LOG       = "GetLogs:"
 	ERROR_ISSEALED  = "IsSealed:"
 	ERROR_UNSEAL    = "Unseal:"
 	ERROR_SEAL      = "Seal:"
@@ -26,13 +31,53 @@ type TokenMessage struct {
 
 type BackupMessage struct {
 	Mode  string `json:"mode" binding:"required"`
-	Run   bool   `json:"run" binding:"required"`
 	Token string `json:"token" binding:"required"`
+	Run   bool   `json:"run"`
+	Test  bool   `json:"test"`
 }
 
 type MountMessage struct {
-	Run   bool   `json:"run" binding:"required"`
 	Token string `json:"token" binding:"required"`
+	Run   bool   `json:"run"`
+	Test  bool   `json:"test"`
+}
+
+func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) error, c *gin.Context) {
+	if err := function(cmd, mode); err != nil {
+		log.Println(ERROR_PREFIX + err.Error())
+		enqueue(err.Error(), c)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			JSON_MESSAGE: err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func HandleMountFolders(config []GocryptConfig, function func(*exec.Cmd, string) error, c *gin.Context, buffer bytes.Buffer) {
+	out, ok := MountFolders(config, function)
+	if !ok {
+		for _, err := range out {
+			log.Println(ERROR_PREFIX + err.Error())
+			enqueue(err.Error(), c)
+			buffer.WriteString(err.Error())
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			JSON_MESSAGE: buffer.String(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		JSON_MESSAGE: buffer.String(),
+	})
+}
+
+func enqueue(v interface{}, c *gin.Context) {
+	err := ConcurrentQueue.Enqueue(v)
+	if err != nil {
+		log.Println(ERROR_PREFIX+ERROR_ENQUEUE, err.Error())
+	}
 }
 
 func returnErr(err error, source string, c *gin.Context) {
@@ -96,72 +141,89 @@ func getIsSealed(c *gin.Context) {
 	})
 }
 
-func getStatus(c *gin.Context) {
+func getLog(c *gin.Context) {
+	totalElements := ConcurrentQueue.GetLen()
 
+	var buffer bytes.Buffer
+	for i := 0; i < totalElements; i++ {
+		m, err := ConcurrentQueue.Get(i)
+		if err != nil {
+			returnErr(errors.New(buffer.String()+"\n"+err.Error()), ERROR_LOG, c)
+			return
+		}
+		buffer.WriteString(m.(string))
+	}
+	log.Println("INFO: Log: ", buffer.String())
+	c.JSON(http.StatusOK, gin.H{
+		JSON_MESSAGE: buffer.String(),
+	})
 }
 
-//func postConfig(c *gin.Context) {
-//	var msg TokenMessage
-//	err := c.BindJSON(&msg)
-//	if err != nil {
-//		log.Println(ERROR_PREFIX+"BindJSON:", err.Error())
-//		c.JSON(http.StatusBadRequest, gin.H{
-//			JSON_MESSAGE: err.Error(),
-//		})
-//		return
-//	}
-//	AgentConfiguration.Token = msg.Token
-//	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
-//	if err != nil {
-//		log.Println(ERROR_PREFIX+"GetConfigFromVault:", err.Error())
-//		c.JSON(http.StatusBadRequest, gin.H{
-//			JSON_MESSAGE: err.Error(),
-//		})
-//		return
-//	}
-//	AgentConfiguration.Agent = config.Agent
-//	AgentConfiguration.Gocrypt = config.Gocrypt
-//	AgentConfiguration.Restic = config.Restic
-//	c.JSON(http.StatusOK, gin.H{
-//		JSON_MESSAGE: "Recieved Agent configuration from Vault",
-//	})
-//}
+func getStatus(c *gin.Context) {
+	if jobmap == nil {
+		returnErr(errors.New("ConcurrentMap not initialized"), ERROR_STATUS, c)
+		return
+	}
+	var buffer bytes.Buffer
+	for _, k := range jobmap.Keys() {
+		v, ok := jobmap.Get(k)
+		if ok {
+			cmd := v.(*exec.Cmd)
+			buffer.WriteString("Job: " + k + " Status: " + cmd.ProcessState.String())
+		} else {
+			buffer.WriteString("Job: " + k + " Error while retrieving")
+		}
+	}
+	if jobmap.IsEmpty() {
+		buffer.WriteString("No Job started")
+	}
+
+	log.Println("INFO: Get Status: ", buffer.String())
+	c.JSON(http.StatusOK, gin.H{
+		JSON_MESSAGE: buffer.String(),
+	})
+}
 
 func postMount(c *gin.Context) {
-	var msg *MountMessage
-	err := c.BindJSON(&msg)
-	if err != nil {
-		returnErr(err, ERROR_PREFIX, c)
+	var msg MountMessage
+
+	if err := c.BindJSON(&msg); err != nil {
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
-	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	config, err := GetConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil || config.Agent.Gocryptfs == nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
 
+	var buffer bytes.Buffer
+
+	if msg.Test {
+		log.Println("Test Mode")
+		HandleMountFolders(config.Gocrypt, DontRun, c, buffer)
+		return
+	}
+
 	if msg.Run {
-		out, err := MountFolders(config.Gocrypt, RunJob)
-		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-		}
-		err = ConcurrentQueue.Enqueue(out)
-		if err != nil {
-			log.Println(ERROR_PREFIX + err.Error())
-		}
+		HandleMountFolders(config.Gocrypt, RunJob, c, buffer)
+		return
+	} else {
+		HandleMountFolders(config.Gocrypt, RunJobBackground, c, buffer)
+		return
 	}
 }
 
 func postBackup(c *gin.Context) {
-	var msg *BackupMessage
-	err := c.BindJSON(&msg)
-	if err != nil {
-		returnErr(err, ERROR_PREFIX, c)
+	var msg BackupMessage
+	if err := c.BindJSON(&msg); err != nil {
+		log.Println(msg)
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
-	config, err := GetConfigFromVault(AgentConfiguration.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	config, err := GetConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil || config.Restic == nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
@@ -170,56 +232,38 @@ func postBackup(c *gin.Context) {
 	var cmd *exec.Cmd
 	switch msg.Mode {
 	case "init":
-		cmd := InitRepo(config.Restic.Path, config.Restic.Password)
-		err = ConcurrentQueue.Enqueue(cmd)
-		if err != nil {
-			returnErr(err, ERROR_ENQUEUE, c)
-			return
-		}
+		cmd = InitRepo(config.Restic.Repo, config.Restic.Password)
 	case "exist":
-		cmd = ExistsRepo(config.Restic.Path, config.Restic.Password)
-		err = ConcurrentQueue.Enqueue(cmd)
-		if err != nil {
-			returnErr(err, ERROR_ENQUEUE, c)
-			return
-		}
+		cmd = ExistsRepo(config.Restic.Repo, config.Restic.Password)
 	case "check":
-
-		cmd = CheckRepo(config.Restic.Path,
+		cmd = CheckRepo(config.Restic.Repo,
 			config.Restic.Password,
 		)
-		err = ConcurrentQueue.Enqueue(cmd)
-		if err != nil {
-			returnErr(err, ERROR_ENQUEUE, c)
-			return
-		}
 	case "backup":
-		fallthrough
-	default:
-		cmd = Backup(config.Restic.Path,
+		cmd = Backup(
+			config.Restic.Path,
+			config.Restic.Repo,
 			config.Restic.Password,
 			config.Restic.ExcludePath,
 			2000,
 			2000)
+	default:
+		log.Println("Not supported Mode:", msg.Mode)
+		returnErr(err, ERROR_MODE, c)
+		return
+	}
 
-		err = ConcurrentQueue.Enqueue(cmd)
-		if err != nil {
-			returnErr(err, ERROR_ENQUEUE, c)
-			return
-		}
+	if msg.Test {
+		HandleBackup(cmd, msg.Mode, DontRun, c)
+		return
 	}
 
 	if msg.Run {
-		backup_out, err := RunJob(cmd)
-		if err != nil {
-			returnErr(err, ERROR_RUNBACKUP, c)
-			return
-		}
-		err = ConcurrentQueue.Enqueue(backup_out)
-		if err != nil {
-			returnErr(err, ERROR_ENQUEUE, c)
-			return
-		}
+		HandleBackup(cmd, msg.Mode, RunJob, c)
+		return
+	} else {
+		HandleBackup(cmd, msg.Mode, RunJobBackground, c)
+		return
 	}
 }
 func RunRestServer(address string) (*http.Server, func()) {
@@ -252,5 +296,6 @@ func CreateRestHandler() http.Handler {
 	r.POST("/backup", postBackup)
 	r.GET("/is_sealed", getIsSealed)
 	r.GET("/status", getStatus)
+	r.GET("/logs", getLog)
 	return r
 }

@@ -5,7 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
+	cqueue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,12 +16,43 @@ const (
 	MAIN_TEST_ADDRESS = "localhost:8081"
 )
 
-func TestRunCmd(t *testing.T) {
-	fmt.Println("running: TestRunCmd")
+func TestAddJob(t *testing.T) {
+	fmt.Println("running: TestAddJob")
 	cmd := exec.Command("echo", "hallo")
-	out, err := RunJob(cmd)
+	AddJob(cmd, "test")
+	assert.NotNil(t, jobmap)
+	assert.NotEmpty(t, jobmap)
+}
+func TestRunJobBackground(t *testing.T) {
+	fmt.Println("running: TestRunJobBackground")
+	cmd := exec.Command("echo", "hallo")
+
+	err := RunJobBackground(cmd, "test")
 	assert.NoError(t, err)
-	assert.Equal(t, "hallo\n", out)
+
+	assert.Eventually(t, func() bool {
+		v, ok := jobmap.Get("test")
+		require.True(t, ok)
+		job := v.(Job)
+		return job.Cmd.Process != nil
+	}, time.Duration(10*time.Millisecond), time.Duration(1*time.Millisecond))
+	v, ok := jobmap.Get("test")
+	require.True(t, ok)
+	job := v.(Job)
+	assert.Equal(t, "hallo\n", job.Stdout.String())
+	assert.Equal(t, "", job.Stderr.String())
+}
+func TestRunJob(t *testing.T) {
+	fmt.Println("running: TestRunJob")
+	cmd := exec.Command("echo", "hallo")
+	err := RunJob(cmd, "test")
+	assert.NoError(t, err)
+
+	v, ok := jobmap.Get("test")
+	require.True(t, ok)
+	job := v.(Job)
+	assert.Equal(t, "hallo\n", job.Stdout.String())
+	assert.Equal(t, "", job.Stderr.String())
 }
 
 func TestGetConfigFromVault(t *testing.T) {
@@ -56,4 +89,23 @@ func TestInit(t *testing.T) {
 	assert.Equal(t, AgentConfiguration.Hostname, hostname)
 	assert.Equal(t, AgentConfiguration.Address, MAIN_TEST_ADDRESS)
 	assert.NotNil(t, ConcurrentQueue)
+}
+
+func TestQueueJobStatus(t *testing.T) {
+	fmt.Println("running: TestQueueJobStatus")
+	ConcurrentQueue = cqueue.NewFIFO()
+
+	cmd := exec.Command("echo", "hallo")
+
+	err := RunJob(cmd, "test1")
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	assert.NotNil(t, jobmap)
+	assert.NotEmpty(t, jobmap)
+	v, ok := jobmap.Get("test1")
+
+	require.True(t, ok)
+	job := v.(Job)
+	assert.NotNil(t, job.Cmd.Process)
 }

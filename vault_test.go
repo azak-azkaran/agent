@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	cqueue "github.com/enriquebris/goconcurrentqueue"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,7 @@ type TestConfig struct {
 }
 
 func readConfig(t *testing.T) TestConfig {
+	ConcurrentQueue = cqueue.NewFIFO()
 	if runMock {
 		require.FileExists(t, "./test/secret_mock.yml", "Token file not found")
 		viper.SetConfigName("secret_mock.yml")
@@ -139,4 +141,18 @@ func TestUnseal(t *testing.T) {
 	seal, err = IsSealed(testconfig.config)
 	require.NoError(t, err)
 	assert.False(t, seal)
+}
+
+func TestCheckMap(t *testing.T) {
+	fmt.Println("running: TestCheckMap")
+
+	list := []string{"test"}
+	data := make(map[string]interface{})
+	data["test"] = "test"
+	err := CheckMap(list, data)
+	assert.NoError(t, err)
+
+	list = append(list, "test2")
+	err = CheckMap(list, data)
+	assert.Error(t, err)
 }

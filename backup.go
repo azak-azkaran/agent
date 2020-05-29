@@ -39,17 +39,18 @@ func CheckRepo(repo string, pwd string) *exec.Cmd {
 	return cmd
 }
 
-func Backup(repo string, pwd string, excludeFile string, upload int, download int) *exec.Cmd {
+func Backup(path string, repo string, pwd string, excludeFile string, upload int, download int) *exec.Cmd {
 	//restic --verbose backup ~/* ~/.* -x \
 	//            --exclude-file ~/Documents/backup/exclude_home \
 	//            --tag 'full-home' \
 	//            -o s3.connections=10 --limit-upload 2000 --limit-download 2000
 	cmd := exec.Command("restic",
-		"backup", "~/*", "~/.*", "-x",
+		"backup", AbsolutePath(path), "-x",
 		"--exclude-file", excludeFile,
-		"--tag", "-o", "s3.connections=10",
+		"--tag", "-o s3.connections=10",
 		"--limit-upload", strconv.Itoa(upload),
-		"--limit-download", strconv.Itoa(download))
+		"--limit-download", strconv.Itoa(download),
+		"--quiet")
 
 	cmd.Env = append(os.Environ(),
 		RESTIC_REPOSITORY+repo,

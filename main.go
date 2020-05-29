@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	cqueue "github.com/enriquebris/goconcurrentqueue"
+	cmap "github.com/orcaman/concurrent-map"
 )
 
 const (
@@ -20,6 +23,7 @@ const (
 
 var AgentConfiguration Configuration
 var ConcurrentQueue *cqueue.FIFO
+var jobmap cmap.ConcurrentMap
 
 type Configuration struct {
 	Agent       *AgentConfig
@@ -31,16 +35,109 @@ type Configuration struct {
 	Token       string
 }
 
-func RunJob(cmd *exec.Cmd) (string, error) {
-	out, err := cmd.CombinedOutput()
+type Job struct {
+	Cmd    *exec.Cmd
+	Stdout *bytes.Buffer
+	Stderr *bytes.Buffer
+}
+
+func HandleError(err error) bool {
 	if err != nil {
-		return string(out), err
+		log.Println("ERROR: ", err)
+		err = ConcurrentQueue.Enqueue("ERROR: " + err.Error())
+		if err != nil {
+			log.Println("ERROR: Failed to enqueue: ", err)
+		}
+		return false
 	}
-	return string(out), nil
+	return true
+}
+
+func Log(s string, toQueue string) {
+	log.Println("INFO: " + s)
+	err := ConcurrentQueue.Enqueue(toQueue)
+	if err != nil {
+		log.Println("ERROR: Failed to enqueue, ", err)
+	}
+}
+
+func QueueJobStatus(job Job) {
+	if ConcurrentQueue == nil {
+		ConcurrentQueue = cqueue.NewFIFO()
+	}
+
+	if job.Cmd.Process == nil {
+		log.Println("Process not found")
+		return
+	}
+
+	state, err := job.Cmd.Process.Wait()
+	if err != nil {
+		log.Println("ERROR: ", err)
+		return
+	}
+	if state.Success() {
+		Log("Process exited successfully", job.Stdout.String())
+	} else {
+		Log("Process exited unsuccessfully", job.Stderr.String())
+	}
+
+}
+
+func AddJob(cmd *exec.Cmd, name string) Job {
+	if jobmap == nil {
+		jobmap = cmap.New()
+	}
+	if jobmap.Has(name) {
+		v, ok := jobmap.Get(name)
+		if ok {
+			oldCmd := v.(Job)
+			if oldCmd.Cmd.Process != nil {
+				log.Println("Found job:", name, "\tPID: ", oldCmd.Cmd.Process.Pid)
+			}
+		}
+	}
+
+	job := Job{
+		Cmd:    cmd,
+		Stdout: new(bytes.Buffer),
+		Stderr: new(bytes.Buffer),
+	}
+
+	cmd.Stdout = job.Stdout
+	cmd.Stderr = job.Stderr
+	jobmap.Set(name, job)
+	return job
+}
+
+func RunJob(cmd *exec.Cmd, name string) error {
+	job := AddJob(cmd, name)
+	log.Println("Starting job: ", name)
+	err := job.Cmd.Run()
+	if err != nil {
+		QueueJobStatus(job)
+	}
+	return err
+}
+
+func RunJobBackground(cmd *exec.Cmd, name string) error {
+	go func() {
+		err := RunJob(cmd, name)
+		HandleError(err)
+	}()
+	return nil
+}
+
+func DontRun(cmd *exec.Cmd, name string) error {
+	job := AddJob(cmd, name)
+	log.Println("Not Runing: ", job)
+	QueueJobStatus(job)
+	return nil
 }
 
 func Init(vaultConfig *vault.Config, args []string) error {
 	ConcurrentQueue = cqueue.NewFIFO()
+	jobmap = cmap.New()
 	addressCommend := pflag.NewFlagSet("address", pflag.ContinueOnError)
 	addressCommend.String("address", "localhost:8081", "the addess on which rest server of the agent is startet")
 	viper.SetEnvPrefix("agent")
@@ -115,26 +212,8 @@ func main() {
 	err := Init(vault.DefaultConfig(), os.Args)
 	//log.Print("Please enter Token: ")
 	//password, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		log.Fatal("Error: ", err)
-	}
+	HandleError(err)
 	_, fun := RunRestServer("localhost:8081")
-
-	//token := strings.TrimSpace(string(password))
 	fun()
 
-	//log.Println("Getting Vault configuration for agent: ", name, " from: ", vaultConfig.Address)
-	//config, err := GetConfigFromVault(token, name, vaultConfig)
-	//if err != nil {
-	//  log.Fatal(err)
-	//  panic(err)
-	//}
-	//out, err := MountFolders(config.Gocrypt, RunJob)
-	//if err != nil {
-	//  log.Fatal(err)
-	//  panic(err)
-	//}
-	//for o := range out {
-	//  log.Println(o)
-	//}
 }

@@ -142,9 +142,11 @@ func TestPostBackup(t *testing.T) {
 	server, fun := RunRestServer("localhost:8081")
 	backupMsg := BackupMessage{
 		Mode:  "backup",
+		Test:  true,
 		Run:   true,
 		Token: "randomtoken",
 	}
+
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 	log.Println("Agent rest server startet on: ", server.Addr)
@@ -152,49 +154,63 @@ func TestPostBackup(t *testing.T) {
 	reqBody, err := json.Marshal(backupMsg)
 	require.NoError(t, err)
 
+	fmt.Println("Sending Body:", string(reqBody))
 	resp, err := http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.NotEmpty(t, ConcurrentQueue)
 
-	backupMsg = BackupMessage{
-		Mode: "init",
-	}
+	backupMsg.Mode = "init"
+	backupMsg.Test = false
 	reqBody, err = json.Marshal(backupMsg)
 	require.NoError(t, err)
+	fmt.Println("Sending Body:", string(reqBody))
 
 	resp, err = http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	backupMsg = BackupMessage{
-		Mode: "exist",
-	}
+	backupMsg.Mode = "exist"
 	reqBody, err = json.Marshal(backupMsg)
 	require.NoError(t, err)
+	fmt.Println("Sending Body:", string(reqBody))
+
 	resp, err = http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Millisecond)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	backupMsg = BackupMessage{
-		Mode: "backup",
-	}
+	backupMsg.Mode = "backup"
+	backupMsg.Run = false
 	reqBody, err = json.Marshal(backupMsg)
 	require.NoError(t, err)
+	fmt.Println("Sending Body:", string(reqBody))
 
 	resp, err = http.Post("http://localhost:8081/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	assert.NotEmpty(t, ConcurrentQueue)
-	assert.EqualValues(t, ConcurrentQueue.GetLen(), 4)
+	time.Sleep(1 * time.Millisecond)
+	assert.Eventually(t, func() bool {
+		v, ok := jobmap.Get(backupMsg.Mode)
+		require.True(t, ok)
+		require.NotNil(t, v)
+		j := v.(Job)
+		return j.Cmd.Process != nil
+	},
+		time.Duration(25*time.Second), time.Duration(1*time.Second))
+	//assert.EqualValues(t, ConcurrentQueue.GetLen(), 3)
+
+	v, _ := jobmap.Get(backupMsg.Mode)
+	require.NotNil(t, v)
+	cmd := v.(Job)
+
+	fmt.Println(cmd.Stdout.String())
 
 	if ConcurrentQueue.GetLen() > 0 {
 		_, err = ConcurrentQueue.Dequeue()
@@ -213,7 +229,7 @@ func TestPostMount(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	mountMsg := MountMessage{
-		Run:   true,
+		Test:  true,
 		Token: "randomtoken",
 	}
 	go fun()
@@ -230,9 +246,32 @@ func TestPostMount(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	if ConcurrentQueue.GetLen() > 0 {
-		_, err = ConcurrentQueue.Dequeue()
+		v, err := ConcurrentQueue.Dequeue()
 		assert.NoError(t, err)
+		fmt.Println(v)
 	}
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+func TestStatus(t *testing.T) {
+	fmt.Println("running: TestStatus")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer("localhost:8081")
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	log.Println("Agent rest server startet on: ", server.Addr)
+
+	err := ConcurrentQueue.Enqueue("test")
+	assert.NoError(t, err)
+
+	resp, err := http.Get("http://localhost:8081/status")
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.NotEmpty(t, ConcurrentQueue)
+
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }

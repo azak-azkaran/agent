@@ -20,8 +20,8 @@ var sealStatus bool = false
 const (
 	VAULT_PASSWORD            = "superrandompassword"
 	VAULT_TOKEN               = "superrandompasswordtoken"
-	VAULT_PATH                = "a-random-path"
-	VAULT_MOUNTPATH           = "another-random-path"
+	VAULT_PATH                = "./test/tmp"
+	VAULT_MOUNTPATH           = "./test/tmp-mount"
 	VAULT_CONFIGPATH          = "random-config-path,gocryptpath"
 	VAULT_BACKUP_PATH         = "./test/Backup"
 	VAULT_BACKUP_EXCLUDE_FILE = "./test/exclude"
@@ -82,7 +82,8 @@ func createHandler() http.Handler {
 		var msg vault.Secret
 		data := make(map[string]interface{})
 		secret := make(map[string]string)
-		secret["path"] = VAULT_BACKUP_PATH
+		secret["path"] = "./"
+		secret["repo"] = VAULT_BACKUP_PATH
 		secret["pw"] = VAULT_PASSWORD
 		secret["exclude"] = VAULT_BACKUP_EXCLUDE_FILE
 		data["data"] = secret
@@ -100,6 +101,7 @@ func gocrypt(c *gin.Context) {
 	var msg vault.Secret
 	data := make(map[string]interface{})
 	secret := make(map[string]string)
+
 	secret["path"] = VAULT_PATH
 	secret["mount-path"] = VAULT_MOUNTPATH
 	secret["pw"] = VAULT_PASSWORD

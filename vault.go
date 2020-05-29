@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"log"
 	"strings"
 	"time"
 
@@ -24,7 +26,26 @@ type GocryptConfig struct {
 type ResticConfig struct {
 	Password    string
 	Path        string
+	Repo        string
 	ExcludePath string
+}
+
+func CheckMap(list []string, data map[string]interface{}) error {
+	var message bytes.Buffer
+	message.WriteString("Data in Vault malformed")
+	fail := false
+	for _, v := range list {
+		if data[v] == nil {
+			message.WriteString("\n\t" + v + ": missing")
+			fail = true
+		}
+	}
+
+	if fail {
+		log.Println(message.String())
+		return errors.New(message.String())
+	}
+	return nil
 }
 
 func Seal(config *vault.Config, token string) error {
@@ -85,6 +106,7 @@ func getDataFromSecret(config *vault.Config, token string, path string) (map[str
 	if err != nil {
 		return nil, err
 	}
+
 	if _, ok := secret.Data["data"]; ok {
 		data := secret.Data["data"].(map[string]interface{})
 		if len(data) == 0 {
@@ -102,9 +124,20 @@ func GetResticConfig(config *vault.Config, token string, path string) (*ResticCo
 		return nil, err
 	}
 
+	list := []string{"repo", "path", "exclude", "pw"}
+	err = CheckMap(list, data)
+	if err != nil {
+		return nil, err
+	}
+
 	conf := ResticConfig{
-		Path:     data["path"].(string),
-		Password: data["pw"].(string),
+		Repo:        data[list[0]].(string),
+		Path:        data[list[1]].(string),
+		ExcludePath: data[list[2]].(string),
+		Password:    data[list[3]].(string),
+	}
+	if data["exclude"] != nil {
+		conf.ExcludePath = data["exclude"].(string)
 	}
 	return &conf, nil
 }
@@ -115,10 +148,16 @@ func GetGocryptConfig(config *vault.Config, token string, path string) (*Gocrypt
 		return nil, err
 	}
 
+	list := []string{"mount-path", "path", "pw"}
+	err = CheckMap(list, data)
+	if err != nil {
+		return nil, err
+	}
+
 	conf := GocryptConfig{
-		MountPoint: data["mount-path"].(string),
-		Path:       data["path"].(string),
-		Password:   data["pw"].(string),
+		MountPoint: data[list[0]].(string),
+		Path:       data[list[1]].(string),
+		Password:   data[list[1]].(string),
 	}
 	return &conf, nil
 }
