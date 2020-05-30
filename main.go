@@ -53,8 +53,8 @@ func HandleError(err error) bool {
 	return true
 }
 
-func Log(s string, toQueue string) {
-	log.Println("INFO: " + s)
+func Log(toQueue string) {
+	log.Println("INFO: " + toQueue)
 	err := ConcurrentQueue.Enqueue(toQueue)
 	if err != nil {
 		log.Println("ERROR: Failed to enqueue, ", err)
@@ -71,15 +71,12 @@ func QueueJobStatus(job Job) {
 		return
 	}
 
-	state, err := job.Cmd.Process.Wait()
-	if err != nil {
-		log.Println("ERROR: ", err)
-		return
+	if job.Stdout.Len() > 0 {
+		Log(job.Stdout.String())
 	}
-	if state.Success() {
-		Log("Process exited successfully", job.Stdout.String())
-	} else {
-		Log("Process exited unsuccessfully", job.Stderr.String())
+
+	if job.Stderr.Len() > 0 {
+		Log(job.Stderr.String())
 	}
 
 }
@@ -113,16 +110,20 @@ func AddJob(cmd *exec.Cmd, name string) Job {
 func RunJob(cmd *exec.Cmd, name string) error {
 	job := AddJob(cmd, name)
 	log.Println("Starting job: ", name)
+	return doJob(job)
+}
+
+func doJob(job Job) error {
 	err := job.Cmd.Run()
-	if err != nil {
-		QueueJobStatus(job)
-	}
+	QueueJobStatus(job)
 	return err
 }
 
 func RunJobBackground(cmd *exec.Cmd, name string) error {
 	go func() {
-		err := RunJob(cmd, name)
+		log.Println("Starting job in background: ", name)
+		job := AddJob(cmd, name)
+		err := doJob(job)
 		HandleError(err)
 	}()
 	return nil

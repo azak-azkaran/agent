@@ -35,10 +35,12 @@ func TestRunJobBackground(t *testing.T) {
 		require.True(t, ok)
 		job := v.(Job)
 		return job.Cmd.Process != nil
-	}, time.Duration(10*time.Millisecond), time.Duration(1*time.Millisecond))
+	}, time.Duration(4*time.Second), time.Duration(1*time.Second))
 	v, ok := jobmap.Get("test")
 	require.True(t, ok)
 	job := v.(Job)
+
+	assert.True(t, ConcurrentQueue.GetLen() > 0)
 	assert.Equal(t, "hallo\n", job.Stdout.String())
 	assert.Equal(t, "", job.Stderr.String())
 }
