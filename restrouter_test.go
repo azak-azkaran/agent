@@ -26,8 +26,8 @@ func setupRestrouterTest(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCreateRestHandler(t *testing.T) {
-	fmt.Println("running: TestCreateRestHandler")
+func TestRestCreateRestHandler(t *testing.T) {
+	fmt.Println("running: TestRestCreateRestHandler")
 	setupRestrouterTest(t)
 	server := &http.Server{
 		Addr:    "localhost:8081",
@@ -46,8 +46,8 @@ func TestCreateRestHandler(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRunRestServer(t *testing.T) {
-	fmt.Println("running: TestRunRestServer")
+func TestRestRunRestServer(t *testing.T) {
+	fmt.Println("running: TestRestRunRestServer")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 
@@ -72,8 +72,8 @@ func TestRunRestServer(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestHandleSeal(t *testing.T) {
-	fmt.Println("running: TestRunRestServer")
+func TestRestHandleSeal(t *testing.T) {
+	fmt.Println("running: TestRestRunRestServer")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 
@@ -136,14 +136,15 @@ func TestHandleSeal(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestPostBackup(t *testing.T) {
-	fmt.Println("running: TestPostBackup")
+func TestRestPostBackup(t *testing.T) {
+	fmt.Println("running: TestRestPostBackup")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	backupMsg := BackupMessage{
 		Mode:  "backup",
 		Test:  true,
 		Run:   true,
+		Debug: true,
 		Token: "randomtoken",
 	}
 
@@ -224,8 +225,8 @@ func TestPostBackup(t *testing.T) {
 	assert.NoFileExists(t, BACKUP_CONF_FILE)
 }
 
-func TestPostMount(t *testing.T) {
-	fmt.Println("running: TestPostMount")
+func TestRestPostMount(t *testing.T) {
+	fmt.Println("running: TestRestPostMount")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	mountMsg := MountMessage{
@@ -253,8 +254,8 @@ func TestPostMount(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
-func TestStatus(t *testing.T) {
-	fmt.Println("running: TestStatus")
+func TestRestStatus(t *testing.T) {
+	fmt.Println("running: TestRestStatus")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 

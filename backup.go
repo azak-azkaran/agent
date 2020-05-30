@@ -7,55 +7,42 @@ import (
 )
 
 const (
-	RESTIC_REPOSITORY = "RESTIC_REPOSITORY="
 	RESTIC_PASSWORD   = "RESTIC_PASSWORD="
+	RESTIC_REPOSITORY = "RESTIC_REPOSITORY="
+	RESTIC_ACCESS_KEY = "AWS_ACCESS_KEY_ID="
+	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
 )
 
-func InitRepo(repo string, pwd string) *exec.Cmd {
-	//restic -r "repo" init
-	cmd := exec.Command("restic", "init")
-	cmd.Env = append(os.Environ(),
-		RESTIC_REPOSITORY+repo,
-		RESTIC_PASSWORD+pwd,
-	)
+func createCmd(command string, env []string) *exec.Cmd {
+	cmd := exec.Command("bash", "-c", command)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, env...)
 	return cmd
 }
 
-func ExistsRepo(repo string, pwd string) *exec.Cmd {
-	cmd := exec.Command("restic", "snapshots")
-	cmd.Env = append(os.Environ(),
-		RESTIC_REPOSITORY+repo,
-		RESTIC_PASSWORD+pwd,
-	)
-	return cmd
+func InitRepo(env []string) *exec.Cmd {
+	return createCmd("restic init -v", env)
 }
 
-func CheckRepo(repo string, pwd string) *exec.Cmd {
-	cmd := exec.Command("restic", "check")
-	cmd.Env = append(os.Environ(),
-		RESTIC_REPOSITORY+repo,
-		RESTIC_PASSWORD+pwd,
-	)
-	return cmd
+func ExistsRepo(env []string) *exec.Cmd {
+	return createCmd("restic snapshots -v", env)
 }
 
-func Backup(path string, repo string, pwd string, excludeFile string, upload int, download int) *exec.Cmd {
+func CheckRepo(env []string) *exec.Cmd {
+	return createCmd("restic check -v", env)
+}
+
+func Backup(path string, env []string, excludeFile string, upload int, download int) *exec.Cmd {
 	//restic --verbose backup ~/* ~/.* -x \
 	//            --exclude-file ~/Documents/backup/exclude_home \
 	//            --tag 'full-home' \
 	//            -o s3.connections=10 --limit-upload 2000 --limit-download 2000
-	cmd := exec.Command("restic",
-		"backup", AbsolutePath(path), "-x",
-		"--exclude-file", excludeFile,
-		"--tag", "-o s3.connections=10",
-		"--limit-upload", strconv.Itoa(upload),
-		"--limit-download", strconv.Itoa(download),
-		"--quiet")
+	command := "restic backup " + AbsolutePath(path) + " -x " +
+		" --exclude-file " + excludeFile +
+		" --tag -o s3.connections=10" +
+		" --limit-upload " + strconv.Itoa(upload) +
+		" --limit-download " + strconv.Itoa(download) +
+		" --quiet "
 
-	cmd.Env = append(os.Environ(),
-		RESTIC_REPOSITORY+repo,
-		RESTIC_PASSWORD+pwd,
-	)
-	//cmd.Stdin = strings.NewReader(pwd)
-	return cmd
+	return createCmd(command, env)
 }

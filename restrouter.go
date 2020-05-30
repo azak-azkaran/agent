@@ -34,6 +34,7 @@ type BackupMessage struct {
 	Token string `json:"token" binding:"required"`
 	Run   bool   `json:"run"`
 	Test  bool   `json:"test"`
+	Debug bool   `json:"debug"`
 }
 
 type MountMessage struct {
@@ -232,18 +233,15 @@ func postBackup(c *gin.Context) {
 	var cmd *exec.Cmd
 	switch msg.Mode {
 	case "init":
-		cmd = InitRepo(config.Restic.Repo, config.Restic.Password)
+		cmd = InitRepo(config.Restic.Environment)
 	case "exist":
-		cmd = ExistsRepo(config.Restic.Repo, config.Restic.Password)
+		cmd = ExistsRepo(config.Restic.Environment)
 	case "check":
-		cmd = CheckRepo(config.Restic.Repo,
-			config.Restic.Password,
-		)
+		cmd = CheckRepo(config.Restic.Environment)
 	case "backup":
 		cmd = Backup(
 			config.Restic.Path,
-			config.Restic.Repo,
-			config.Restic.Password,
+			config.Restic.Environment,
 			config.Restic.ExcludePath,
 			2000,
 			2000)
@@ -251,6 +249,10 @@ func postBackup(c *gin.Context) {
 		log.Println("Not supported Mode:", msg.Mode)
 		returnErr(err, ERROR_MODE, c)
 		return
+	}
+	if msg.Debug {
+		log.Println("Command: ", cmd.String())
+		log.Println("Config", config.Restic)
 	}
 
 	if msg.Test {

@@ -23,6 +23,7 @@ func TestAddJob(t *testing.T) {
 	assert.NotNil(t, jobmap)
 	assert.NotEmpty(t, jobmap)
 }
+
 func TestRunJobBackground(t *testing.T) {
 	fmt.Println("running: TestRunJobBackground")
 	cmd := exec.Command("echo", "hallo")
@@ -44,9 +45,11 @@ func TestRunJobBackground(t *testing.T) {
 	assert.Equal(t, "hallo\n", job.Stdout.String())
 	assert.Equal(t, "", job.Stderr.String())
 }
+
 func TestRunJob(t *testing.T) {
 	fmt.Println("running: TestRunJob")
 	cmd := exec.Command("echo", "hallo")
+
 	err := RunJob(cmd, "test")
 	assert.NoError(t, err)
 
@@ -55,6 +58,19 @@ func TestRunJob(t *testing.T) {
 	job := v.(Job)
 	assert.Equal(t, "hallo\n", job.Stdout.String())
 	assert.Equal(t, "", job.Stderr.String())
+
+	cmd = exec.Command("printenv")
+	cmd.Env = []string{"TEST=hallo"}
+
+	err = RunJob(cmd, "test")
+	assert.NoError(t, err)
+
+	v, ok = jobmap.Get("test")
+	require.True(t, ok)
+	job = v.(Job)
+	assert.Equal(t, "TEST=hallo\n", job.Stdout.String())
+	assert.Equal(t, "", job.Stderr.String())
+
 }
 
 func TestGetConfigFromVault(t *testing.T) {

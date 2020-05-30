@@ -25,6 +25,8 @@ const (
 	VAULT_CONFIGPATH          = "random-config-path,gocryptpath"
 	VAULT_BACKUP_PATH         = "./test/Backup"
 	VAULT_BACKUP_EXCLUDE_FILE = "./test/exclude"
+	VAULT_BACKUP_SECRET_KEY   = "secret.key"
+	VAULT_BACKUP_ACCESS_KEY   = "access.key"
 )
 
 var Hostname string
@@ -86,6 +88,8 @@ func createHandler() http.Handler {
 		secret["repo"] = VAULT_BACKUP_PATH
 		secret["pw"] = VAULT_PASSWORD
 		secret["exclude"] = VAULT_BACKUP_EXCLUDE_FILE
+		secret["access_key"] = VAULT_BACKUP_ACCESS_KEY
+		secret["secret_key"] = VAULT_BACKUP_SECRET_KEY
 		data["data"] = secret
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)

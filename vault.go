@@ -28,6 +28,9 @@ type ResticConfig struct {
 	Path        string
 	Repo        string
 	ExcludePath string
+	SecretKey   string
+	AccessKey   string
+	Environment []string
 }
 
 func CheckMap(list []string, data map[string]interface{}) error {
@@ -124,7 +127,7 @@ func GetResticConfig(config *vault.Config, token string, path string) (*ResticCo
 		return nil, err
 	}
 
-	list := []string{"repo", "path", "exclude", "pw"}
+	list := []string{"repo", "path", "exclude", "pw", "access_key", "secret_key"}
 	err = CheckMap(list, data)
 	if err != nil {
 		return nil, err
@@ -135,6 +138,15 @@ func GetResticConfig(config *vault.Config, token string, path string) (*ResticCo
 		Path:        data[list[1]].(string),
 		ExcludePath: data[list[2]].(string),
 		Password:    data[list[3]].(string),
+		AccessKey:   data[list[4]].(string),
+		SecretKey:   data[list[5]].(string),
+	}
+
+	conf.Environment = []string{
+		RESTIC_ACCESS_KEY + conf.AccessKey,
+		RESTIC_SECRET_KEY + conf.SecretKey,
+		RESTIC_REPOSITORY + conf.Repo,
+		RESTIC_PASSWORD + conf.Password,
 	}
 	if data["exclude"] != nil {
 		conf.ExcludePath = data["exclude"].(string)

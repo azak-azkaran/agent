@@ -37,31 +37,56 @@ func clear() {
 	}
 }
 
-func TestBackup(t *testing.T) {
-	fmt.Println("running: TestBackup")
+func TestBackupDoBackup(t *testing.T) {
+	fmt.Println("running: TestBackupDoBackup")
 	t.Cleanup(clear)
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
-	cmd := Backup(pwd, BACKUP_FOLDER, "test", EXCLUDE_FILE, 2000, 2000)
-	assert.Contains(t, cmd.String(), "restic backup "+
-		pwd+" "+
-		"-x --exclude-file "+EXCLUDE_FILE+" --tag -o s3.connections=10 --limit-upload 2000 --limit-download 2000")
+	env := []string{
+		RESTIC_PASSWORD + "test",
+		RESTIC_REPOSITORY + BACKUP_FOLDER,
+	}
+
+	cmd := InitRepo(env)
+	require.DirExists(t, BACKUP_FOLDER)
+	err = RunJob(cmd, "test")
+	assert.NoError(t, err)
+
+	cmd = Backup(pwd, env, EXCLUDE_FILE, 2000, 2000)
+	assert.Contains(t, cmd.String(), "restic backup ")
+	assert.Contains(t, cmd.String(), pwd)
+	assert.Contains(t, cmd.String(), "--exclude-file "+EXCLUDE_FILE)
+	assert.Contains(t, cmd.String(), "--tag -o s3.connections=10")
+	assert.Contains(t, cmd.String(), "--limit-upload 2000")
+	assert.Contains(t, cmd.String(), "--limit-download 2000")
+
+	err = RunJob(cmd, "backup")
+	assert.NoError(t, err)
+	is, err := IsEmpty(BACKUP_FOLDER)
+	assert.NoError(t, err)
+	assert.False(t, is)
+	assert.FileExists(t, "./test/Backup/config")
+
 }
 
-func TestExistsRepo(t *testing.T) {
-	fmt.Println("running: TestExistsRepo")
+func TestBackupExistsRepo(t *testing.T) {
+	fmt.Println("running: TestBackupExistsRepo")
 	t.Cleanup(clear)
-	cmd := ExistsRepo(BACKUP_FOLDER, "hallo")
+	env := []string{
+		RESTIC_PASSWORD + "hallo",
+		RESTIC_REPOSITORY + BACKUP_FOLDER,
+	}
+	cmd := ExistsRepo(env)
 	assert.Contains(t, cmd.String(), "restic snapshots")
 	err := RunJob(cmd, "test")
 	assert.Error(t, err)
 
-	cmd = InitRepo(BACKUP_FOLDER, "hallo")
+	cmd = InitRepo(env)
 	require.NoFileExists(t, BACKUP_CONF_FILE)
 	err = RunJob(cmd, "test")
 	assert.NoError(t, err)
 
-	cmd = ExistsRepo(BACKUP_FOLDER, "hallo")
+	cmd = ExistsRepo(env)
 	err = RunJob(cmd, "test")
 	assert.NoError(t, err)
 
@@ -71,12 +96,17 @@ func TestExistsRepo(t *testing.T) {
 	fmt.Println(job.Stdout.String())
 }
 
-func TestInitRepo(t *testing.T) {
-	fmt.Println("running: TestInitRepo")
+func TestBackupInitRepo(t *testing.T) {
+	fmt.Println("running: TestBackupInitRepo")
 	t.Cleanup(clear)
-	cmd := InitRepo(BACKUP_FOLDER, "hallo")
+	env := []string{
+		RESTIC_PASSWORD + "hallo",
+		RESTIC_REPOSITORY + BACKUP_FOLDER,
+	}
+	cmd := InitRepo(env)
 	require.NoFileExists(t, BACKUP_CONF_FILE)
 	assert.Contains(t, cmd.String(), "restic init")
+	assert.Contains(t, cmd.Env, RESTIC_REPOSITORY+BACKUP_FOLDER)
 
 	require.DirExists(t, BACKUP_FOLDER)
 	err := RunJob(cmd, "test")
