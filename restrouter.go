@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,10 +39,11 @@ type BackupMessage struct {
 }
 
 type MountMessage struct {
-	Token string `json:"token" binding:"required"`
-	Run   bool   `json:"run"`
-	Test  bool   `json:"test"`
-	Debug bool   `json:"debug"`
+	Token    string `json:"token" binding:"required"`
+	Run      bool   `json:"run"`
+	Test     bool   `json:"test"`
+	Debug    bool   `json:"debug"`
+	Duration string `json:"duration"`
 }
 
 func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) error, c *gin.Context) {
@@ -198,6 +200,18 @@ func postMount(c *gin.Context) {
 	if err != nil || config.Agent.Gocryptfs == nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
+	}
+
+	if msg.Duration != "" {
+		dur, err := time.ParseDuration(msg.Duration)
+		if err != nil {
+			log.Println("ERROR: Failed to parse duration", err)
+		} else {
+			for i, v := range config.Gocrypt {
+				v.Duration = dur
+				config.Gocrypt[i] = v
+			}
+		}
 	}
 
 	if msg.Debug {
