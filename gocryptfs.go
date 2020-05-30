@@ -37,21 +37,21 @@ func MountFolders(config []GocryptConfig, function func(*exec.Cmd, string) error
 
 func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string, allowOther bool) *exec.Cmd {
 	var cmd *exec.Cmd
-	var command []string
+	var command string
 
-	command = append(command, "gocryptfs")
+	command = "gocryptfs"
 	if allowOther {
-		command = append(command, "-allow_other")
+		command = command + " -allow_other"
 		//cmd = exec.Command("gocryptfs", "-allow_other", "-i", duration.String(), AbsolutePath(cryptoDir), AbsolutePath(folder))
 		//} else {
 		//	cmd = exec.Command("gocryptfs", "-i", duration.String(), AbsolutePath(cryptoDir), AbsolutePath(folder))
 	}
 	if duration.String() != "0s" {
-		command = append(command, "-i", duration.String())
+		command = command + " -i " + duration.String()
 	}
 
-	command = append(command, AbsolutePath(cryptoDir), AbsolutePath(folder))
-	cmd = exec.Command(command[0], command[1:]...)
+	command = command + " " + AbsolutePath(cryptoDir) + " " + AbsolutePath(folder)
+	cmd = exec.Command("bash", "-c", command)
 	cmd.Env = os.Environ()
 	cmd.Stdin = strings.NewReader(pwd)
 	return cmd

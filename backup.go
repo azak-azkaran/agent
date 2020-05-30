@@ -14,6 +14,7 @@ const (
 )
 
 func createCmd(command string, env []string) *exec.Cmd {
+	//https://stackoverflow.com/a/43246464/9447237
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, env...)
@@ -21,15 +22,15 @@ func createCmd(command string, env []string) *exec.Cmd {
 }
 
 func InitRepo(env []string) *exec.Cmd {
-	return createCmd("restic init -v", env)
+	return createCmd("restic init", env)
 }
 
 func ExistsRepo(env []string) *exec.Cmd {
-	return createCmd("restic snapshots -v", env)
+	return createCmd("restic snapshots", env)
 }
 
 func CheckRepo(env []string) *exec.Cmd {
-	return createCmd("restic check -v", env)
+	return createCmd("restic check", env)
 }
 
 func Backup(path string, env []string, excludeFile string, upload int, download int) *exec.Cmd {

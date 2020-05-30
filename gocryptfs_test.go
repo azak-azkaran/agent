@@ -23,8 +23,8 @@ const (
 var testRun *testing.T
 var count int = 0
 
-func TestMountGocryptfs(t *testing.T) {
-	fmt.Println("running: TestMountGocryptfs")
+func TestGocryptfsMountGocryptfs(t *testing.T) {
+	fmt.Println("running: TestGocryptfsMountGocryptfs")
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
 	require.DirExists(t, GOCRYPT_TEST_FOLDER)
@@ -34,7 +34,7 @@ func TestMountGocryptfs(t *testing.T) {
 
 	cmd := MountGocryptfs("./test/tmp", GOCRYPT_TEST_MOUNTPATH, idletime, "hallo", false)
 
-	assert.Equal(t, "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
+	assert.Contains(t, cmd.String(), "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
 		// clear location of executable
 		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
 
@@ -49,8 +49,8 @@ func TestMountGocryptfs(t *testing.T) {
 	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
 }
 
-func TestMountFolders(t *testing.T) {
-	fmt.Println("running: TestMountFolders")
+func TestGocryptfsMountFolders(t *testing.T) {
+	fmt.Println("running: TestGocryptfsMountFolders")
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
 	require.DirExists(t, GOCRYPT_TEST_FOLDER)
@@ -76,7 +76,7 @@ func TestMountFolders(t *testing.T) {
 
 func CheckCmd(cmd *exec.Cmd, v string) error {
 	count++
-	b := assert.Equal(testRun, "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
+	b := assert.Contains(testRun, cmd.String(), "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
 		// clear location of executable
 		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
 	if b {
@@ -86,8 +86,8 @@ func CheckCmd(cmd *exec.Cmd, v string) error {
 	}
 }
 
-func TestAbsolutePath(t *testing.T) {
-	fmt.Println("running: TestAbsolutePath")
+func TestGocryptfsAbsolutePath(t *testing.T) {
+	fmt.Println("running: TestGocryptfsAbsolutePath")
 	dir, err := os.UserHomeDir()
 	assert.NoError(t, err)
 
@@ -97,8 +97,8 @@ func TestAbsolutePath(t *testing.T) {
 	assert.False(t, strings.HasPrefix(path, dir))
 }
 
-func TestIsEmpty(t *testing.T) {
-	fmt.Println("running: TestIsEmpty")
+func TestGocryptfsIsEmpty(t *testing.T) {
+	fmt.Println("running: TestGocryptfsIsEmpty")
 	is, err := IsEmpty("./test")
 	assert.NoError(t, err)
 	assert.False(t, is)
