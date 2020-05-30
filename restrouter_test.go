@@ -266,7 +266,7 @@ func TestRestPostMount(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "testfile\n", string(b))
 
-	time.Sleep(6 * time.Second)
+	time.Sleep(7 * time.Second)
 	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
 
 	err = server.Shutdown(context.Background())
