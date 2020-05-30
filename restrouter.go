@@ -39,11 +39,12 @@ type BackupMessage struct {
 }
 
 type MountMessage struct {
-	Token    string `json:"token" binding:"required"`
-	Run      bool   `json:"run"`
-	Test     bool   `json:"test"`
-	Debug    bool   `json:"debug"`
-	Duration string `json:"duration"`
+	Token      string `json:"token" binding:"required"`
+	Run        bool   `json:"run"`
+	Test       bool   `json:"test"`
+	Debug      bool   `json:"debug"`
+	Duration   string `json:"duration"`
+	AllowOther bool   `json:"allowOther"`
 }
 
 func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) error, c *gin.Context) {
@@ -209,6 +210,7 @@ func postMount(c *gin.Context) {
 		} else {
 			for i, v := range config.Gocrypt {
 				v.Duration = dur
+				v.AllowOther = msg.AllowOther
 				config.Gocrypt[i] = v
 			}
 		}

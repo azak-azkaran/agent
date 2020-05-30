@@ -230,10 +230,11 @@ func TestRestPostMount(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	mountMsg := MountMessage{
-		Test:     true,
-		Token:    "randomtoken",
-		Debug:    true,
-		Duration: "5s",
+		Test:       true,
+		Token:      "randomtoken",
+		Debug:      true,
+		Duration:   "5s",
+		AllowOther: false,
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)
@@ -264,6 +265,9 @@ func TestRestPostMount(t *testing.T) {
 	b, err := ioutil.ReadFile(GOCRYPT_TEST_FILE) // just pass the file name
 	assert.NoError(t, err)
 	assert.Equal(t, "testfile\n", string(b))
+
+	time.Sleep(6 * time.Second)
+	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
