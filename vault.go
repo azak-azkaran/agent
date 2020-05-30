@@ -169,7 +169,7 @@ func GetGocryptConfig(config *vault.Config, token string, path string) (*Gocrypt
 	conf := GocryptConfig{
 		MountPoint: data[list[0]].(string),
 		Path:       data[list[1]].(string),
-		Password:   data[list[1]].(string),
+		Password:   data[list[2]].(string),
 	}
 	return &conf, nil
 }

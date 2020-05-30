@@ -60,8 +60,8 @@ func readConfig(t *testing.T) TestConfig {
 	return conf
 }
 
-func TestIsSealed(t *testing.T) {
-	fmt.Println("running: TestGetStatus")
+func TestVaultIsSealed(t *testing.T) {
+	fmt.Println("running: TestVaultGetStatus")
 	testconfig := readConfig(t)
 
 	resp, err := IsSealed(testconfig.config)
@@ -69,8 +69,8 @@ func TestIsSealed(t *testing.T) {
 	assert.False(t, resp, ERROR_VAULT_SEALED)
 }
 
-func TestGetSecret(t *testing.T) {
-	fmt.Println("running: TestGetSecret")
+func TestVaultGetSecret(t *testing.T) {
+	fmt.Println("running: TestVaultGetSecret")
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -81,8 +81,8 @@ func TestGetSecret(t *testing.T) {
 	assert.NotNil(t, resp.Data["data"])
 }
 
-func TestGetGocryptConfig(t *testing.T) {
-	fmt.Println("running: TestGetGocryptconfig")
+func TestVaultGetGocryptConfig(t *testing.T) {
+	fmt.Println("running: TestVaultGetGocryptconfig")
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -95,8 +95,8 @@ func TestGetGocryptConfig(t *testing.T) {
 	assert.NotNil(t, conf.Password)
 }
 
-func TestGetResticConfig(t *testing.T) {
-	fmt.Println("running: TestGetResticConfig")
+func TestVaultGetResticConfig(t *testing.T) {
+	fmt.Println("running: TestVaultGetResticConfig")
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -108,8 +108,8 @@ func TestGetResticConfig(t *testing.T) {
 	assert.NotNil(t, conf.Password)
 }
 
-func TestGetAgentConfig(t *testing.T) {
-	fmt.Println("running: TestGetAgentConfig")
+func TestVaultGetAgentConfig(t *testing.T) {
+	fmt.Println("running: TestVaultGetAgentConfig")
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -121,8 +121,8 @@ func TestGetAgentConfig(t *testing.T) {
 	assert.NotEmpty(t, conf.Gocryptfs)
 }
 
-func TestUnseal(t *testing.T) {
-	fmt.Println("running: TestUnseal")
+func TestVaultUnseal(t *testing.T) {
+	fmt.Println("running: TestVaultUnseal")
 	if !runMock {
 		fmt.Println("Test can only be run in Mock mode")
 		return
@@ -143,8 +143,8 @@ func TestUnseal(t *testing.T) {
 	assert.False(t, seal)
 }
 
-func TestCheckMap(t *testing.T) {
-	fmt.Println("running: TestCheckMap")
+func TestVaultCheckMap(t *testing.T) {
+	fmt.Println("running: TestVaultCheckMap")
 
 	list := []string{"test"}
 	data := make(map[string]interface{})

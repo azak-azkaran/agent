@@ -18,11 +18,11 @@ var running bool = false
 var sealStatus bool = false
 
 const (
-	VAULT_PASSWORD            = "superrandompassword"
+	VAULT_PASSWORD            = "hallo"
 	VAULT_TOKEN               = "superrandompasswordtoken"
 	VAULT_PATH                = "./test/tmp"
 	VAULT_MOUNTPATH           = "./test/tmp-mount"
-	VAULT_CONFIGPATH          = "random-config-path,gocryptpath"
+	VAULT_CONFIGPATH          = "gocryptpath"
 	VAULT_BACKUP_PATH         = "./test/Backup"
 	VAULT_BACKUP_EXCLUDE_FILE = "./test/exclude"
 	VAULT_BACKUP_SECRET_KEY   = "secret.key"
@@ -109,7 +109,7 @@ func gocrypt(c *gin.Context) {
 	secret["path"] = VAULT_PATH
 	secret["mount-path"] = VAULT_MOUNTPATH
 	secret["pw"] = VAULT_PASSWORD
-	secret["duration"] = "1s"
+	secret["duration"] = "3s"
 	data["data"] = secret
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)

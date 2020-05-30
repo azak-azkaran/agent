@@ -41,6 +41,7 @@ type MountMessage struct {
 	Token string `json:"token" binding:"required"`
 	Run   bool   `json:"run"`
 	Test  bool   `json:"test"`
+	Debug bool   `json:"debug"`
 }
 
 func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) error, c *gin.Context) {
@@ -199,6 +200,9 @@ func postMount(c *gin.Context) {
 		return
 	}
 
+	if msg.Debug {
+		log.Println("Config", config.Gocrypt)
+	}
 	var buffer bytes.Buffer
 
 	if msg.Test {

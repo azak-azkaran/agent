@@ -20,3 +20,4 @@ cover.html
 report.json
 
 test/secret.yml
+test/tmp-mount/

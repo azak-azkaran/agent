@@ -232,6 +232,7 @@ func TestRestPostMount(t *testing.T) {
 	mountMsg := MountMessage{
 		Test:  true,
 		Token: "randomtoken",
+		Debug: true,
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)
@@ -246,11 +247,23 @@ func TestRestPostMount(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	if ConcurrentQueue.GetLen() > 0 {
-		v, err := ConcurrentQueue.Dequeue()
-		assert.NoError(t, err)
-		fmt.Println(v)
-	}
+	mountMsg.Test = false
+	mountMsg.Run = true
+	reqBody, err = json.Marshal(mountMsg)
+	require.NoError(t, err)
+
+	resp, err = http.Post("http://localhost:8081/mount",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	require.FileExists(t, GOCRYPT_TEST_FILE)
+	b, err := ioutil.ReadFile(GOCRYPT_TEST_FILE) // just pass the file name
+	assert.NoError(t, err)
+	assert.Equal(t, "testfile\n", string(b))
+
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
@@ -272,6 +285,43 @@ func TestRestStatus(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.NotEmpty(t, ConcurrentQueue)
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestRestGetLog(t *testing.T) {
+	fmt.Println("running: TestRestGetLog")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer("localhost:8081")
+	backupMsg := BackupMessage{
+		Mode:  "backup",
+		Test:  true,
+		Run:   true,
+		Debug: true,
+		Token: "randomtoken",
+	}
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	log.Println("Agent rest server startet on: ", server.Addr)
+
+	reqBody, err := json.Marshal(backupMsg)
+	require.NoError(t, err)
+
+	fmt.Println("Sending Body:", string(reqBody))
+	resp, err := http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.NotEmpty(t, ConcurrentQueue)
+
+	resp, err = http.Get("http://localhost:8081/logs")
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
