@@ -17,5 +17,8 @@ coverage: fetch
 	@echo Running Test with Coverage export
 	go test -v -coverprofile=cover.out
 	go test -json > report.json
-	go tool cover -html=cover.out -o cover.html
 
+html_coverage: fetch
+	@echo Running Test with Coverage for html
+	go test -v -coverprofile=cover.out
+	go tool cover -html=cover.out -o cover.html
