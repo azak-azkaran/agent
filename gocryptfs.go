@@ -6,33 +6,27 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 )
 
-func MountFolders(config []GocryptConfig, function func(*exec.Cmd, string) error) ([]error, bool) {
-	ok := true
-	var output []error
+func MountFolders(config []GocryptConfig) []*exec.Cmd {
+	var output []*exec.Cmd
 	for i, folderconfig := range config {
 		log.Println("Mounting: ", i, " with name: ", AbsolutePath(folderconfig.MountPoint))
 		cmd := MountGocryptfs(folderconfig.Path, folderconfig.MountPoint, folderconfig.Duration, folderconfig.Password, folderconfig.AllowOther)
 		empty, err := IsEmpty(folderconfig.MountPoint)
 		if err != nil {
-			ok = false
+			log.Println("ERROR", err)
 		} else {
 			if !empty {
 				log.Println(AbsolutePath(folderconfig.MountPoint), ": was not empty")
 			} else {
-				err := function(cmd, "mount"+strconv.Itoa(i))
-				if err != nil {
-					ok = false
-					output = append(output, err)
-				}
+				output = append(output, cmd)
 			}
 		}
 	}
-	return output, ok
+	return output
 }
 
 func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string, allowOther bool) *exec.Cmd {

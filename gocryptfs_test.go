@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -69,9 +70,12 @@ func TestGocryptfsMountFolders(t *testing.T) {
 	configs = append(configs, config, config)
 
 	testRun = t
-	errs, ok := MountFolders(configs, CheckCmd)
-	assert.True(t, ok)
-	assert.Empty(t, errs)
+	cmds := MountFolders(configs)
+	assert.NotEmpty(t, cmds)
+	for k, v := range cmds {
+		err = CheckCmd(v, "mount"+strconv.Itoa(k))
+		assert.NoError(t, err)
+	}
 }
 
 func CheckCmd(cmd *exec.Cmd, v string) error {

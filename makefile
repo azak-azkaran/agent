@@ -6,15 +6,15 @@ fetch:
 
 install: fetch
 	@echo Installing to ${GOPATH}/bin
-	go -v install
+	go install -v
 
 test: fetch
 	@echo Running tests
-	go -v test
+	export RUN_MOCK=true
+	go test -v
 
 
 coverage: fetch
 	@echo Running Test with Coverage export
 	go test -v -coverprofile=cover.out
 	go tool cover -html=cover.out -o cover.html
-	#go test -json > report.json

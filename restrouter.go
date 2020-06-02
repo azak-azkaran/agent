@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strconv"
 	"time"
 
+	cqueue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +21,7 @@ const (
 	ERROR_UNSEAL    = "Unseal:"
 	ERROR_SEAL      = "Seal:"
 	ERROR_RUNBACKUP = "RunBackupJob:"
+	ERROR_RUNMOUNT  = "RunMountJob:"
 	ERROR_ENQUEUE   = "Enqueue:"
 	ERROR_CONFIG    = "GetConfigFromVault:"
 	ERROR_BINDING   = "BindJSON:"
@@ -50,35 +53,40 @@ type MountMessage struct {
 func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) error, c *gin.Context) {
 	if err := function(cmd, mode); err != nil {
 		log.Println(ERROR_PREFIX + err.Error())
-		enqueue(err.Error(), c)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			JSON_MESSAGE: err.Error(),
-		})
+		enqueue(err.Error())
+		returnErr(err, ERROR_RUNBACKUP, c)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-func HandleMountFolders(config []GocryptConfig, function func(*exec.Cmd, string) error, c *gin.Context, buffer bytes.Buffer) {
-	out, ok := MountFolders(config, function)
-	if !ok {
-		for _, err := range out {
-			log.Println(ERROR_PREFIX + err.Error())
-			enqueue(err.Error(), c)
-			buffer.WriteString(err.Error())
+func HandleMountFolders(cmds []*exec.Cmd, function func(*exec.Cmd, string) error, c *gin.Context, buffer bytes.Buffer) {
+	ok := true
+	for k, v := range cmds {
+		if err := function(v, "mount"+strconv.Itoa(k)); err != nil {
+			m := ERROR_PREFIX + ERROR_RUNMOUNT + err.Error()
+			enqueue(err.Error())
+			log.Println(m)
+			buffer.WriteString(m)
+			ok = false
 		}
+	}
+	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			JSON_MESSAGE: buffer.String(),
 		})
-		return
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			JSON_MESSAGE: buffer.String(),
+		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: buffer.String(),
-	})
 }
 
-func enqueue(v interface{}, c *gin.Context) {
+func enqueue(v interface{}) {
+	if ConcurrentQueue == nil {
+		ConcurrentQueue = cqueue.NewFIFO()
+	}
 	err := ConcurrentQueue.Enqueue(v)
 	if err != nil {
 		log.Println(ERROR_PREFIX+ERROR_ENQUEUE, err.Error())
@@ -216,22 +224,27 @@ func postMount(c *gin.Context) {
 		}
 	}
 
+	out := MountFolders(config.Gocrypt)
+
 	if msg.Debug {
 		log.Println("Config", config.Gocrypt)
+		for k, v := range out {
+			log.Println("Command", k, ": ", v.String())
+		}
 	}
 	var buffer bytes.Buffer
 
 	if msg.Test {
 		log.Println("Test Mode")
-		HandleMountFolders(config.Gocrypt, DontRun, c, buffer)
+		HandleMountFolders(out, DontRun, c, buffer)
 		return
 	}
 
 	if msg.Run {
-		HandleMountFolders(config.Gocrypt, RunJob, c, buffer)
+		HandleMountFolders(out, RunJob, c, buffer)
 		return
 	} else {
-		HandleMountFolders(config.Gocrypt, RunJobBackground, c, buffer)
+		HandleMountFolders(out, RunJobBackground, c, buffer)
 		return
 	}
 }
