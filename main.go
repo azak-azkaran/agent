@@ -73,10 +73,14 @@ func QueueJobStatus(job Job) {
 
 	if job.Stdout.Len() > 0 {
 		Log(job.Stdout.String())
+	} else {
+		Log("No Output in stdout")
 	}
 
 	if job.Stderr.Len() > 0 {
 		Log(job.Stderr.String())
+	} else {
+		Log("No Output in stderr")
 	}
 
 }

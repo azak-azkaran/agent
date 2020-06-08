@@ -34,16 +34,12 @@ func CheckRepo(env []string) *exec.Cmd {
 }
 
 func Backup(path string, env []string, excludeFile string, upload int, download int) *exec.Cmd {
-	//restic --verbose backup ~/* ~/.* -x \
-	//            --exclude-file ~/Documents/backup/exclude_home \
-	//            --tag 'full-home' \
-	//            -o s3.connections=10 --limit-upload 2000 --limit-download 2000
-	command := "restic backup " + AbsolutePath(path) + " -x " +
+	command := "restic backup " + path + " -x " +
 		" --exclude-file " + excludeFile +
-		" --tag -o s3.connections=10" +
+		" --tag 'full-home' " + //"-o s3.connections=10" +
 		" --limit-upload " + strconv.Itoa(upload) +
-		" --limit-download " + strconv.Itoa(download) +
-		" --quiet "
+		" --limit-download " + strconv.Itoa(download) //+
+	//" --quiet "
 
 	return createCmd(command, env)
 }

@@ -16,16 +16,16 @@ const (
 	MAIN_TEST_ADDRESS = "localhost:8081"
 )
 
-func TestAddJob(t *testing.T) {
-	fmt.Println("running: TestAddJob")
+func TestMainAddJob(t *testing.T) {
+	fmt.Println("running: TestMainAddJob")
 	cmd := exec.Command("echo", "hallo")
 	AddJob(cmd, "test")
 	assert.NotNil(t, jobmap)
 	assert.NotEmpty(t, jobmap)
 }
 
-func TestRunJobBackground(t *testing.T) {
-	fmt.Println("running: TestRunJobBackground")
+func TestMainRunJobBackground(t *testing.T) {
+	fmt.Println("running: TestMainRunJobBackground")
 	cmd := exec.Command("echo", "hallo")
 
 	err := RunJobBackground(cmd, "test")
@@ -46,8 +46,8 @@ func TestRunJobBackground(t *testing.T) {
 	assert.Equal(t, "", job.Stderr.String())
 }
 
-func TestRunJob(t *testing.T) {
-	fmt.Println("running: TestRunJob")
+func TestMainRunJob(t *testing.T) {
+	fmt.Println("running: TestMainRunJob")
 	cmd := exec.Command("echo", "hallo")
 
 	err := RunJob(cmd, "test")
@@ -73,8 +73,8 @@ func TestRunJob(t *testing.T) {
 
 }
 
-func TestGetConfigFromVault(t *testing.T) {
-	fmt.Println("running: TestGetConfig")
+func TestMainGetConfigFromVault(t *testing.T) {
+	fmt.Println("running: TestMainGetConfigFromVault")
 	testconfig := readConfig(t)
 
 	config, err := GetConfigFromVault(testconfig.token, testconfig.configpath, testconfig.config)
@@ -84,8 +84,8 @@ func TestGetConfigFromVault(t *testing.T) {
 	assert.NotEmpty(t, config.Gocrypt)
 }
 
-func TestInit(t *testing.T) {
-	fmt.Println("running: TestInitWithEnvironment")
+func TestMainInit(t *testing.T) {
+	fmt.Println("running: TestMainInit")
 	testconfig := readConfig(t)
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
@@ -109,8 +109,8 @@ func TestInit(t *testing.T) {
 	assert.NotNil(t, ConcurrentQueue)
 }
 
-func TestQueueJobStatus(t *testing.T) {
-	fmt.Println("running: TestQueueJobStatus")
+func TestMainQueueJobStatus(t *testing.T) {
+	fmt.Println("running: TestMainQueueJobStatus")
 	ConcurrentQueue = cqueue.NewFIFO()
 
 	cmd := exec.Command("echo", "hallo")

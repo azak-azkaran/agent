@@ -6,6 +6,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v42.3.0+incompatible
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/dgraph-io/badger v1.6.1
 	github.com/dgraph-io/badger/v2 v2.0.3
 	github.com/dgraph-io/ristretto v0.0.2 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
