@@ -128,7 +128,7 @@ func TestVaultUnseal(t *testing.T) {
 		return
 	}
 	testconfig := readConfig(t)
-	err := Seal(testconfig.config, VAULT_TOKEN)
+	err := Seal(testconfig.config, VAULT_TEST_TOKEN)
 	require.NoError(t, err)
 
 	seal, err := IsSealed(testconfig.config)

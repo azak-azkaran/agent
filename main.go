@@ -17,10 +17,6 @@ import (
 	cmap "github.com/orcaman/concurrent-map"
 )
 
-const (
-	ERROR_VAULT_SEALED = "Vault is sealed."
-)
-
 var AgentConfiguration Configuration
 var ConcurrentQueue *cqueue.FIFO
 var jobmap cmap.ConcurrentMap

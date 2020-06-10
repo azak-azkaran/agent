@@ -10,11 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	BACKUP_FOLDER    = "./test/Backup"
-	EXCLUDE_FILE     = "./test/exclude"
-	BACKUP_CONF_FILE = "./test/Backup/config"
-)
+const ()
 
 func RemoveContents(dir string) error {
 	files, err := filepath.Glob(filepath.Join(dir, "*"))
@@ -31,7 +27,7 @@ func RemoveContents(dir string) error {
 }
 
 func clear() {
-	err := RemoveContents(BACKUP_FOLDER)
+	err := RemoveContents(BACKUP_TEST_FOLDER)
 	if err != nil {
 		fmt.Println("Error cleaning up: ", err.Error())
 	}
@@ -44,27 +40,26 @@ func TestBackupDoBackup(t *testing.T) {
 	require.NoError(t, err)
 	env := []string{
 		RESTIC_PASSWORD + "test",
-		RESTIC_REPOSITORY + BACKUP_FOLDER,
+		RESTIC_REPOSITORY + BACKUP_TEST_FOLDER,
 	}
 
-	os.MkdirAll(BACKUP_FOLDER, os.ModePerm)
+	os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
 
 	cmd := InitRepo(env)
-	require.DirExists(t, BACKUP_FOLDER)
+	require.DirExists(t, BACKUP_TEST_FOLDER)
 	err = RunJob(cmd, "test")
 	assert.NoError(t, err)
 
-	cmd = Backup(pwd, env, EXCLUDE_FILE, 2000, 2000)
+	cmd = Backup(pwd, env, BACKUP_TEST_EXCLUDE_FILE, 2000, 2000)
 	assert.Contains(t, cmd.String(), "restic backup ")
 	assert.Contains(t, cmd.String(), pwd)
-	assert.Contains(t, cmd.String(), "--exclude-file "+EXCLUDE_FILE)
-	assert.Contains(t, cmd.String(), "--tag -o s3.connections=10")
+	assert.Contains(t, cmd.String(), "--exclude-file "+BACKUP_TEST_EXCLUDE_FILE)
 	assert.Contains(t, cmd.String(), "--limit-upload 2000")
 	assert.Contains(t, cmd.String(), "--limit-download 2000")
 
 	err = RunJob(cmd, "backup")
 	assert.NoError(t, err)
-	is, err := IsEmpty(BACKUP_FOLDER)
+	is, err := IsEmpty(BACKUP_TEST_FOLDER)
 	assert.NoError(t, err)
 	assert.False(t, is)
 	assert.FileExists(t, "./test/Backup/config")
@@ -76,16 +71,16 @@ func TestBackupExistsRepo(t *testing.T) {
 	t.Cleanup(clear)
 	env := []string{
 		RESTIC_PASSWORD + "hallo",
-		RESTIC_REPOSITORY + BACKUP_FOLDER,
+		RESTIC_REPOSITORY + BACKUP_TEST_FOLDER,
 	}
-	os.MkdirAll(BACKUP_FOLDER, os.ModePerm)
+	os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
 	cmd := ExistsRepo(env)
 	assert.Contains(t, cmd.String(), "restic snapshots")
 	err := RunJob(cmd, "test")
 	assert.Error(t, err)
 
 	cmd = InitRepo(env)
-	require.NoFileExists(t, BACKUP_CONF_FILE)
+	require.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 	err = RunJob(cmd, "test")
 	assert.NoError(t, err)
 
@@ -104,15 +99,15 @@ func TestBackupInitRepo(t *testing.T) {
 	t.Cleanup(clear)
 	env := []string{
 		RESTIC_PASSWORD + "hallo",
-		RESTIC_REPOSITORY + BACKUP_FOLDER,
+		RESTIC_REPOSITORY + BACKUP_TEST_FOLDER,
 	}
-	os.MkdirAll(BACKUP_FOLDER, os.ModePerm)
+	os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
 	cmd := InitRepo(env)
-	require.NoFileExists(t, BACKUP_CONF_FILE)
+	require.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 	assert.Contains(t, cmd.String(), "restic init")
-	assert.Contains(t, cmd.Env, RESTIC_REPOSITORY+BACKUP_FOLDER)
+	assert.Contains(t, cmd.Env, RESTIC_REPOSITORY+BACKUP_TEST_FOLDER)
 
-	require.DirExists(t, BACKUP_FOLDER)
+	require.DirExists(t, BACKUP_TEST_FOLDER)
 	err := RunJob(cmd, "test")
 	assert.NoError(t, err)
 }

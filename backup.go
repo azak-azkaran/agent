@@ -6,13 +6,6 @@ import (
 	"strconv"
 )
 
-const (
-	RESTIC_PASSWORD   = "RESTIC_PASSWORD="
-	RESTIC_REPOSITORY = "RESTIC_REPOSITORY="
-	RESTIC_ACCESS_KEY = "AWS_ACCESS_KEY_ID="
-	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
-)
-
 func createCmd(command string, env []string) *exec.Cmd {
 	//https://stackoverflow.com/a/43246464/9447237
 	cmd := exec.Command("bash", "-c", command)

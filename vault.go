@@ -110,6 +110,10 @@ func getDataFromSecret(config *vault.Config, token string, path string) (map[str
 		return nil, err
 	}
 
+	if secret == nil {
+		return nil, errors.New(ERROR_NO_CONFIG)
+	}
+
 	if _, ok := secret.Data["data"]; ok {
 		data := secret.Data["data"].(map[string]interface{})
 		if len(data) == 0 {

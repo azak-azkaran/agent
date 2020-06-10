@@ -54,8 +54,15 @@ func TestStoreIntegration(t *testing.T) {
 
 	value, err := Get(db, "answer")
 	assert.NoError(t, err)
-
 	assert.Equal(t, "42", value)
+
+	ok, err = Put(db, "answer", "theAnswer")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	value, err = Get(db, "answer")
+	assert.NoError(t, err)
+	assert.Equal(t, "theAnswer", value)
 
 	err = RemoveContents("./test/DB/")
 	assert.NoError(t, err)

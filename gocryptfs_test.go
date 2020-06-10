@@ -15,12 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	GOCRYPT_TEST_MOUNTPATH = "./test/tmp-mount"
-	GOCRYPT_TEST_FILE      = "./test/tmp-mount/test"
-	GOCRYPT_TEST_FOLDER    = "./test/tmp"
-)
-
 var testRun *testing.T
 var count int = 0
 

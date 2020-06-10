@@ -17,18 +17,6 @@ var server *http.Server
 var running bool = false
 var sealStatus bool = false
 
-const (
-	VAULT_PASSWORD            = "hallo"
-	VAULT_TOKEN               = "superrandompasswordtoken"
-	VAULT_PATH                = "./test/tmp"
-	VAULT_MOUNTPATH           = "./test/tmp-mount"
-	VAULT_CONFIGPATH          = "gocryptpath"
-	VAULT_BACKUP_PATH         = "./test/Backup"
-	VAULT_BACKUP_EXCLUDE_FILE = "./test/exclude"
-	VAULT_BACKUP_SECRET_KEY   = "secret.key"
-	VAULT_BACKUP_ACCESS_KEY   = "access.key"
-)
-
 var Hostname string
 
 func StartServer(t *testing.T, address string) {
@@ -85,11 +73,11 @@ func createHandler() http.Handler {
 		data := make(map[string]interface{})
 		secret := make(map[string]string)
 		secret["path"] = "./"
-		secret["repo"] = VAULT_BACKUP_PATH
-		secret["pw"] = VAULT_PASSWORD
-		secret["exclude"] = VAULT_BACKUP_EXCLUDE_FILE
-		secret["access_key"] = VAULT_BACKUP_ACCESS_KEY
-		secret["secret_key"] = VAULT_BACKUP_SECRET_KEY
+		secret["repo"] = VAULT_TEST_BACKUP_PATH
+		secret["pw"] = VAULT_TEST_PASSWORD
+		secret["exclude"] = VAULT_TEST_BACKUP_EXCLUDE_FILE
+		secret["access_key"] = VAULT_TEST_BACKUP_ACCESS_KEY
+		secret["secret_key"] = VAULT_TEST_BACKUP_SECRET_KEY
 		data["data"] = secret
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)
@@ -106,9 +94,9 @@ func gocrypt(c *gin.Context) {
 	data := make(map[string]interface{})
 	secret := make(map[string]string)
 
-	secret["path"] = VAULT_PATH
-	secret["mount-path"] = VAULT_MOUNTPATH
-	secret["pw"] = VAULT_PASSWORD
+	secret["path"] = VAULT_TEST_PATH
+	secret["mount-path"] = VAULT_TEST_MOUNTPATH
+	secret["pw"] = VAULT_TEST_PASSWORD
 	secret["duration"] = "3s"
 	data["data"] = secret
 	msg.Data = data
@@ -120,7 +108,7 @@ func config(c *gin.Context) {
 	data := make(map[string]interface{})
 
 	data["restic"] = "resticpath"
-	data["gocryptfs"] = VAULT_CONFIGPATH
+	data["gocryptfs"] = VAULT_TEST_CONFIGPATH
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)
 }

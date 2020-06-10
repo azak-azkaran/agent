@@ -12,10 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	MAIN_TEST_ADDRESS = "localhost:8081"
-)
-
 func TestMainAddJob(t *testing.T) {
 	fmt.Println("running: TestMainAddJob")
 	cmd := exec.Command("echo", "hallo")

@@ -220,9 +220,9 @@ func TestRestPostBackup(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
-	err = RemoveContents(BACKUP_FOLDER)
+	err = RemoveContents(BACKUP_TEST_FOLDER)
 	assert.NoError(t, err)
-	assert.NoFileExists(t, BACKUP_CONF_FILE)
+	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 }
 
 func TestRestPostMount(t *testing.T) {
