@@ -13,22 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	ERROR_MODE      = "Backup Mode:"
-	ERROR_STATUS    = "GetStatus:"
-	ERROR_LOG       = "GetLogs:"
-	ERROR_ISSEALED  = "IsSealed:"
-	ERROR_UNSEAL    = "Unseal:"
-	ERROR_SEAL      = "Seal:"
-	ERROR_RUNBACKUP = "RunBackupJob:"
-	ERROR_RUNMOUNT  = "RunMountJob:"
-	ERROR_ENQUEUE   = "Enqueue:"
-	ERROR_CONFIG    = "GetConfigFromVault:"
-	ERROR_BINDING   = "BindJSON:"
-	ERROR_PREFIX    = "ERROR: "
-	JSON_MESSAGE    = "message"
-)
-
 type TokenMessage struct {
 	Token string `json:"token" binding:"required"`
 }

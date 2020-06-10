@@ -82,8 +82,18 @@ func createHandler() http.Handler {
 		msg.Data = data
 		c.JSON(http.StatusOK, msg)
 	})
-	r.GET("/v1/config/"+Hostname, config)
-	r.GET("/v1/config/configpath", config)
+	//r.GET("/v1/config/"+Hostname, config)
+	//r.GET("/v1/config/configpath", config)
+	r.GET("/v1/config/:name", func(c *gin.Context) {
+		name := c.Param("name")
+
+		if name == Hostname || name == "configpath" {
+			config(c)
+			return
+		}
+		var arr []string
+		c.JSON(404, gin.H{"error": arr})
+	})
 	r.GET("/v1/gocrypt/data/random-config-path", gocrypt)
 	r.GET("/v1/gocrypt/data/gocryptpath", gocrypt)
 	return r

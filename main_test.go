@@ -78,6 +78,12 @@ func TestMainGetConfigFromVault(t *testing.T) {
 	assert.NotNil(t, config.Agent)
 	assert.NotNil(t, config.Restic)
 	assert.NotEmpty(t, config.Gocrypt)
+
+	testconfig.configpath = "notExist"
+	config, err = GetConfigFromVault(testconfig.token, testconfig.configpath, testconfig.config)
+	assert.Error(t, err)
+	assert.EqualError(t, err, ERROR_VAULT_NO_SECRET)
+	assert.Nil(t, config)
 }
 
 func TestMainInit(t *testing.T) {

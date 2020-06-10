@@ -7,8 +7,23 @@ const (
 	RESTIC_ACCESS_KEY = "AWS_ACCESS_KEY_ID="
 	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
 
-	ERROR_VAULT_SEALED = "Vault is sealed."
-	ERROR_NO_CONFIG    = "Vault has no config of this host"
+	// Restrouter
+	ERROR_MODE      = "Backup Mode:"
+	ERROR_STATUS    = "GetStatus:"
+	ERROR_LOG       = "GetLogs:"
+	ERROR_ISSEALED  = "IsSealed:"
+	ERROR_UNSEAL    = "Unseal:"
+	ERROR_SEAL      = "Seal:"
+	ERROR_RUNBACKUP = "RunBackupJob:"
+	ERROR_RUNMOUNT  = "RunMountJob:"
+	ERROR_ENQUEUE   = "Enqueue:"
+	ERROR_CONFIG    = "GetConfigFromVault:"
+	ERROR_BINDING   = "BindJSON:"
+	ERROR_PREFIX    = "ERROR: "
+	JSON_MESSAGE    = "message"
+
+	ERROR_VAULT_SEALED    = "Vault is sealed."
+	ERROR_VAULT_NO_SECRET = "Vault has no data for this endpoint."
 
 	BACKUP_TEST_FOLDER       = "./test/Backup"
 	BACKUP_TEST_EXCLUDE_FILE = "./test/exclude"

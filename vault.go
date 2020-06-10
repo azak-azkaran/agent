@@ -111,7 +111,7 @@ func getDataFromSecret(config *vault.Config, token string, path string) (map[str
 	}
 
 	if secret == nil {
-		return nil, errors.New(ERROR_NO_CONFIG)
+		return nil, errors.New(ERROR_VAULT_NO_SECRET)
 	}
 
 	if _, ok := secret.Data["data"]; ok {

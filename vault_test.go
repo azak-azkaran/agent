@@ -119,6 +119,11 @@ func TestVaultGetAgentConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, conf.Gocryptfs)
 	assert.NotEmpty(t, conf.Gocryptfs)
+
+	testconfig.configpath = "notExist"
+	conf, err = GetAgentConfig(testconfig.config, testconfig.token, testconfig.configpath)
+	assert.Error(t, err)
+	assert.Nil(t, conf)
 }
 
 func TestVaultUnseal(t *testing.T) {
