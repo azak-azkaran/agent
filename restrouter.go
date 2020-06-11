@@ -166,8 +166,8 @@ func getStatus(c *gin.Context) {
 	for _, k := range jobmap.Keys() {
 		v, ok := jobmap.Get(k)
 		if ok {
-			cmd := v.(*exec.Cmd)
-			buffer.WriteString("Job: " + k + " Status: " + cmd.ProcessState.String())
+			cmd := v.(Job)
+			buffer.WriteString("Job: " + k + " Status: " + cmd.Cmd.ProcessState.String())
 		} else {
 			buffer.WriteString("Job: " + k + " Error while retrieving")
 		}

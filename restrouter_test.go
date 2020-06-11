@@ -282,12 +282,28 @@ func TestRestStatus(t *testing.T) {
 	fmt.Println("running: TestRestStatus")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
+	backupMsg := BackupMessage{
+		Mode:  "init",
+		Run:   true,
+		Debug: true,
+		Token: "randomtoken",
+	}
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 	log.Println("Agent rest server startet on: ", server.Addr)
 
-	err := ConcurrentQueue.Enqueue("test")
+	reqBody, err := json.Marshal(backupMsg)
+	require.NoError(t, err)
+	_, err = http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+
+	backupMsg.Mode = "check"
+	reqBody, err = json.Marshal(backupMsg)
+	require.NoError(t, err)
+	_, err = http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 
 	resp, err := http.Get("http://localhost:8081/status")
@@ -299,6 +315,10 @@ func TestRestStatus(t *testing.T) {
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
+
+	err = RemoveContents(BACKUP_TEST_FOLDER)
+	assert.NoError(t, err)
+	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 }
 
 func TestRestGetLog(t *testing.T) {
