@@ -306,7 +306,7 @@ func TestRestGetLog(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer("localhost:8081")
 	backupMsg := BackupMessage{
-		Mode:  "backup",
+		Mode:  "blub",
 		Test:  true,
 		Run:   true,
 		Debug: true,
@@ -325,13 +325,17 @@ func TestRestGetLog(t *testing.T) {
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	assert.NotEmpty(t, ConcurrentQueue)
 
 	resp, err = http.Get("http://localhost:8081/logs")
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	bodyString := string(bodyBytes)
+	fmt.Println(bodyString)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	err = server.Shutdown(context.Background())

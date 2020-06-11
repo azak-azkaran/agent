@@ -79,6 +79,7 @@ func enqueue(v interface{}) {
 
 func returnErr(err error, source string, c *gin.Context) {
 	log.Println(ERROR_PREFIX+source, err.Error())
+	enqueue(ERROR_PREFIX + source + " " + err.Error())
 	c.JSON(http.StatusInternalServerError, gin.H{
 		JSON_MESSAGE: err.Error(),
 	})
@@ -263,8 +264,7 @@ func postBackup(c *gin.Context) {
 			2000,
 			2000)
 	default:
-		log.Println("Not supported Mode:", msg.Mode)
-		returnErr(err, ERROR_MODE, c)
+		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
 		return
 	}
 	if msg.Debug {
