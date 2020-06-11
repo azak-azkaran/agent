@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"testing"
@@ -72,6 +76,11 @@ func TestMainRunJob(t *testing.T) {
 func TestMainGetConfigFromVault(t *testing.T) {
 	fmt.Println("running: TestMainGetConfigFromVault")
 	testconfig := readConfig(t)
+	setupRestrouterTest(t)
+	server, fun := RunRestServer("localhost:8081")
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
 
 	config, err := GetConfigFromVault(testconfig.token, testconfig.configpath, testconfig.config)
 	require.NoError(t, err)
@@ -84,6 +93,9 @@ func TestMainGetConfigFromVault(t *testing.T) {
 	assert.Error(t, err)
 	assert.EqualError(t, err, ERROR_VAULT_NO_SECRET)
 	assert.Nil(t, config)
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
 }
 
 func TestMainInit(t *testing.T) {
@@ -128,4 +140,57 @@ func TestMainQueueJobStatus(t *testing.T) {
 	require.True(t, ok)
 	job := v.(Job)
 	assert.NotNil(t, job.Cmd.Process)
+}
+
+func TestMainStart(t *testing.T) {
+	fmt.Println("running: TestMainStart")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer("localhost:8081")
+
+	go fun()
+	assert.NotNil(t, AgentConfiguration.DB)
+
+	time.Sleep(1 * time.Millisecond)
+	Start("5s", false)
+
+	tokenMessage := TokenMessage{
+		Token: "randomtoken",
+	}
+	reqBody, err := json.Marshal(tokenMessage)
+	require.NoError(t, err)
+
+	fmt.Println("Sending Body:", string(reqBody))
+	resp, err := http.Post("http://localhost:8081/token",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	Start("5s", false)
+
+	time.Sleep(1 * time.Millisecond)
+	assert.Eventually(t, func() bool {
+		v, ok := jobmap.Get("backup")
+		require.True(t, ok)
+		require.NotNil(t, v)
+		j := v.(Job)
+		return j.Cmd.Process != nil
+	},
+		time.Duration(25*time.Second), time.Duration(1*time.Second))
+
+	if ConcurrentQueue.GetLen() > 0 {
+		_, err = ConcurrentQueue.Dequeue()
+		assert.NoError(t, err)
+	}
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = RemoveContents(BACKUP_TEST_FOLDER)
+	assert.NoError(t, err)
+	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
+
+	err = RemoveContents("./test/DB/")
+	assert.NoError(t, err)
+	assert.NoFileExists(t, "./test/DB/MANIFEST")
+	time.Sleep(1 * time.Millisecond)
 }

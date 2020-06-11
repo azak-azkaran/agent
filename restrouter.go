@@ -285,6 +285,30 @@ func postBackup(c *gin.Context) {
 		return
 	}
 }
+
+func postToken(c *gin.Context) {
+	var msg TokenMessage
+	if err := c.BindJSON(&msg); err != nil {
+		log.Println(msg)
+		returnErr(err, ERROR_BINDING, c)
+		return
+	}
+
+	ok, err := PutToken(AgentConfiguration.DB, msg.Token)
+	if err != nil {
+		returnErr(err, ERROR_PUT_TOKEN, c)
+		return
+	}
+
+	if ok {
+		c.JSON(http.StatusOK, gin.H{})
+		return
+	} else {
+		returnErr(errors.New("Storage Error PUT returned false"), ERROR_PUT_TOKEN, c)
+		return
+	}
+}
+
 func RunRestServer(address string) (*http.Server, func()) {
 	server := &http.Server{
 		Addr:    "localhost:8081",
@@ -309,6 +333,7 @@ func CreateRestHandler() http.Handler {
 		})
 	})
 
+	r.POST("/token", postToken)
 	r.POST("/unseal", postUnseal)
 	r.POST("/seal", postSeal)
 	r.POST("/mount", postMount)

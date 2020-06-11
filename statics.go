@@ -7,6 +7,10 @@ const (
 	RESTIC_ACCESS_KEY = "AWS_ACCESS_KEY_ID="
 	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
 
+	// Store Constants
+	STORE_TOKEN     = "token"
+	STORE_TIMESTAMP = "timestamp"
+
 	// Restrouter
 	ERROR_MODE      = "Backup Mode:"
 	ERROR_STATUS    = "GetStatus:"
@@ -19,11 +23,16 @@ const (
 	ERROR_ENQUEUE   = "Enqueue:"
 	ERROR_CONFIG    = "GetConfigFromVault:"
 	ERROR_BINDING   = "BindJSON:"
+	ERROR_PUT_TOKEN = "PutToken:"
 	ERROR_PREFIX    = "ERROR: "
 	JSON_MESSAGE    = "message"
 
 	ERROR_VAULT_SEALED    = "Vault is sealed."
 	ERROR_VAULT_NO_SECRET = "Vault has no data for this endpoint."
+
+	ERROR_UNMARSHAL        = "Error marshaling message: "
+	ERROR_SENDING_REQUEST  = "Error sending request: "
+	ERROR_READING_RESPONSE = "Error reading response: "
 
 	BACKUP_TEST_FOLDER       = "./test/Backup"
 	BACKUP_TEST_EXCLUDE_FILE = "./test/exclude"

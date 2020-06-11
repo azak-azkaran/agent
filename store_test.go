@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	badger "github.com/dgraph-io/badger/v2"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ func TestStoreInitDB(t *testing.T) {
 	fmt.Println("running: TestStoreInitDB")
 
 	db := InitDB("", true)
-	assert.NotNil(t, db)
+	require.NotNil(t, db)
 
 	err := db.Update(func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte("answer"), []byte("42"))
@@ -44,8 +45,15 @@ func TestStoreInitDB(t *testing.T) {
 
 func TestStoreIntegration(t *testing.T) {
 	fmt.Println("running: TestStoreIntegration")
-	db := InitDB("./test/DB", false)
-	assert.NotNil(t, db)
+
+	var db *badger.DB
+	assert.Eventually(t, func() bool {
+		db = InitDB("./test/DB", false)
+		return db != nil
+	},
+		time.Duration(25*time.Second), time.Duration(1*time.Second))
+
+	require.NotNil(t, db)
 	assert.FileExists(t, "./test/DB/MANIFEST")
 
 	ok, err := Put(db, "answer", "42")
@@ -115,4 +123,46 @@ func TestStoreGet(t *testing.T) {
 	test, err := strconv.Atoi(string(val))
 	require.NoError(t, err)
 	assert.Equal(t, 42, test)
+}
+
+func TestStoreUpdateTimestamp(t *testing.T) {
+	fmt.Println("running: TestStoreUpdateTimestamp")
+	db := InitDB("", true)
+	require.NotNil(t, db)
+
+	value, err := GetTimestamp(db)
+	assert.Error(t, err)
+	assert.Equal(t, time.Unix(0, 0), value)
+
+	timestamp := time.Now()
+
+	ok, err := UpdateTimestamp(db, timestamp)
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	value, err = GetTimestamp(db)
+	assert.NoError(t, err)
+	assert.Equal(t, timestamp.Unix(), value.Unix())
+	assert.Equal(t, timestamp.Format(time.RFC3339Nano), value.Format(time.RFC3339Nano))
+}
+
+func TestStoreCheckToken(t *testing.T) {
+	fmt.Println("running: TestStoreCheckToken")
+	db := InitDB("", true)
+	require.NotNil(t, db)
+
+	ok := CheckToken(db)
+	assert.False(t, ok)
+
+	ok, err := PutToken(db, "testToken")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	value, err := GetToken(db)
+	assert.NoError(t, err)
+	assert.Equal(t, "testToken", value)
+
+	ok = CheckToken(db)
+	assert.True(t, ok)
+
 }

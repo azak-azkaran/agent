@@ -2,7 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 
+	"github.com/dgraph-io/badger/v2"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -26,9 +30,12 @@ type Configuration struct {
 	Restic      *ResticConfig
 	Gocrypt     []GocryptConfig
 	VaultConfig *vault.Config
+	DB          *badger.DB
 	Hostname    string
 	Address     string
 	Token       string
+	PathDB      string
+	Timer       time.Timer
 }
 
 type Job struct {
@@ -139,14 +146,17 @@ func DontRun(cmd *exec.Cmd, name string) error {
 func Init(vaultConfig *vault.Config, args []string) error {
 	ConcurrentQueue = cqueue.NewFIFO()
 	jobmap = cmap.New()
-	addressCommend := pflag.NewFlagSet("address", pflag.ContinueOnError)
+	addressCommend := pflag.NewFlagSet("agent", pflag.ContinueOnError)
 	addressCommend.String("address", "localhost:8081", "the addess on which rest server of the agent is startet")
+	addressCommend.String("pathdb", "localhost:8081", "The path where to save the Database")
+
 	viper.SetEnvPrefix("agent")
-	err := viper.BindEnv("address")
-	if err != nil {
-		return err
-	}
-	err = viper.BindPFlags(pflag.CommandLine)
+	//err := viper.BindEnv("address")
+	//if err != nil {
+	//	return err
+	//}
+
+	err := viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
 		return err
 	}
@@ -170,6 +180,13 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	} else {
 		AgentConfiguration.Address = "localhost:8081"
 	}
+
+	if viper.IsSet("pathdb") {
+		AgentConfiguration.PathDB = viper.GetString("pathdb")
+	} else {
+		AgentConfiguration.PathDB = ""
+	}
+
 	return nil
 }
 
@@ -209,6 +226,85 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 	return &config, nil
 }
 
+func Start(Duration string, AllowOther bool) {
+	if AgentConfiguration.DB == nil {
+		log.Println("Database is not initialized")
+		return
+	}
+
+	ok := CheckToken(AgentConfiguration.DB)
+	if !ok {
+		log.Println("Token is not set")
+		return
+	}
+
+	token, err := GetToken(AgentConfiguration.DB)
+	if err != nil {
+		log.Println("Read token failed: ", err)
+		return
+	}
+
+	mountMsg := MountMessage{
+		Token:      token,
+		Duration:   Duration,
+		AllowOther: AllowOther,
+	}
+
+	reqBody, err := json.Marshal(mountMsg)
+	if err != nil {
+		log.Println(ERROR_UNMARSHAL, err)
+		return
+	}
+
+	resp, err := http.Post("http://localhost:8081/mount",
+		"application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Println(ERROR_SENDING_REQUEST, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(ERROR_READING_RESPONSE, err)
+			return
+		}
+		bodyString := string(bodyBytes)
+		log.Println("Error while mounting: ", bodyString)
+	}
+
+	backupMsg := BackupMessage{
+		Mode:  "backup",
+		Token: token,
+	}
+
+	reqBody, err = json.Marshal(backupMsg)
+	if err != nil {
+		log.Println(ERROR_UNMARSHAL, err)
+		return
+	}
+
+	resp, err = http.Post("http://localhost:8081/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Println(ERROR_SENDING_REQUEST, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(ERROR_READING_RESPONSE, err)
+			return
+		}
+		bodyString := string(bodyBytes)
+		log.Println("Error while backup: ", bodyString)
+	}
+
+}
+
 func main() {
 	err := Init(vault.DefaultConfig(), os.Args)
 	//log.Print("Please enter Token: ")
@@ -216,5 +312,4 @@ func main() {
 	HandleError(err)
 	_, fun := RunRestServer("localhost:8081")
 	fun()
-
 }

@@ -24,6 +24,10 @@ func setupRestrouterTest(t *testing.T) {
 	os.Setenv("AGENT_ADDRESS", testconfig.config.Address)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
+
+	if AgentConfiguration.DB == nil {
+		AgentConfiguration.DB = InitDB("", true)
+	}
 }
 
 func TestRestCreateRestHandler(t *testing.T) {
@@ -202,7 +206,9 @@ func TestRestPostBackup(t *testing.T) {
 		require.True(t, ok)
 		require.NotNil(t, v)
 		j := v.(Job)
-		return j.Cmd.Process != nil
+
+		_, err := os.Stat(BACKUP_TEST_CONF_FILE)
+		return j.Cmd.Process != nil && err == nil
 	},
 		time.Duration(25*time.Second), time.Duration(1*time.Second))
 	//assert.EqualValues(t, ConcurrentQueue.GetLen(), 3)
@@ -327,6 +333,36 @@ func TestRestGetLog(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestRestPostToken(t *testing.T) {
+	fmt.Println("running: TestRestPostToken")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer("localhost:8081")
+	tokenMessage := TokenMessage{
+		Token: "randomtoken",
+	}
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	log.Println("Agent rest server startet on: ", server.Addr)
+
+	reqBody, err := json.Marshal(tokenMessage)
+	require.NoError(t, err)
+
+	fmt.Println("Sending Body:", string(reqBody))
+	resp, err := http.Post("http://localhost:8081/token",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.NotEmpty(t, ConcurrentQueue)
+
+	ok := CheckToken(AgentConfiguration.DB)
+	assert.True(t, ok)
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
