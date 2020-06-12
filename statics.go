@@ -11,6 +11,14 @@ const (
 	STORE_TOKEN     = "token"
 	STORE_TIMESTAMP = "timestamp"
 
+	MAIN_PATHDB         = "pathdb"
+	MAIN_ADDRESS        = "address"
+	MAIN_TIME_DURATION  = "duration"
+	MAIN_MOUNT_DURATION = "mount-duration"
+	MAIN_MOUNT_ALLOW    = "mount-allow"
+
+	ERROR_DATABASE_NOT_FOUND = "Database is not initialized"
+
 	// Restrouter
 	ERROR_MODE      = "Backup Mode:"
 	ERROR_STATUS    = "GetStatus:"
@@ -53,5 +61,9 @@ const (
 	VAULT_TEST_BACKUP_SECRET_KEY   = "secret.key"
 	VAULT_TEST_BACKUP_ACCESS_KEY   = "access.key"
 
-	MAIN_TEST_ADDRESS = "localhost:8081"
+	MAIN_TEST_ADDRESS        = "localhost:8081"
+	MAIN_TEST_PATHDB         = "./test/DB"
+	MAIN_TEST_DURATION       = "1h30m"
+	MAIN_TEST_MOUNT_DURATION = "5s"
+	MAIN_TEST_MOUNT_ALLOW    = "false"
 )

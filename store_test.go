@@ -46,15 +46,8 @@ func TestStoreInitDB(t *testing.T) {
 func TestStoreIntegration(t *testing.T) {
 	fmt.Println("running: TestStoreIntegration")
 
-	var db *badger.DB
-	assert.Eventually(t, func() bool {
-		db = InitDB("./test/DB", false)
-		return db != nil
-	},
-		time.Duration(25*time.Second), time.Duration(1*time.Second))
-
+	db := InitDB("", true)
 	require.NotNil(t, db)
-	assert.FileExists(t, "./test/DB/MANIFEST")
 
 	ok, err := Put(db, "answer", "42")
 	assert.NoError(t, err)

@@ -26,16 +26,19 @@ var ConcurrentQueue *cqueue.FIFO
 var jobmap cmap.ConcurrentMap
 
 type Configuration struct {
-	Agent       *AgentConfig
-	Restic      *ResticConfig
-	Gocrypt     []GocryptConfig
-	VaultConfig *vault.Config
-	DB          *badger.DB
-	Hostname    string
-	Address     string
-	Token       string
-	PathDB      string
-	Timer       time.Timer
+	Agent            *AgentConfig
+	Restic           *ResticConfig
+	Gocrypt          []GocryptConfig
+	VaultConfig      *vault.Config
+	DB               *badger.DB
+	Hostname         string
+	Address          string
+	Token            string
+	PathDB           string
+	TimeBetweenStart time.Duration
+	Timer            *time.Timer
+	MountAllow       bool
+	MountDuration    string
 }
 
 type Job struct {
@@ -147,16 +150,38 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	ConcurrentQueue = cqueue.NewFIFO()
 	jobmap = cmap.New()
 	addressCommend := pflag.NewFlagSet("agent", pflag.ContinueOnError)
-	addressCommend.String("address", "localhost:8081", "the addess on which rest server of the agent is startet")
-	addressCommend.String("pathdb", "localhost:8081", "The path where to save the Database")
+	addressCommend.String(MAIN_ADDRESS, "localhost:8081", "the addess on which rest server of the agent is startet")
+	addressCommend.String(MAIN_PATHDB, "/opt/agent/db", "The path where to save the Database")
+	addressCommend.String(MAIN_TIME_DURATION, "30m", "The duration between backups")
+	addressCommend.String(MAIN_MOUNT_DURATION, "", "The Duration how long the gocrypt should be mounted")
+	addressCommend.String(MAIN_MOUNT_ALLOW, "true", "If the gocrypt mount should be allowed by other users")
 
 	viper.SetEnvPrefix("agent")
-	//err := viper.BindEnv("address")
-	//if err != nil {
-	//	return err
-	//}
+	err := viper.BindEnv(MAIN_ADDRESS)
+	if err != nil {
+		return err
+	}
 
-	err := viper.BindPFlags(pflag.CommandLine)
+	err = viper.BindEnv(MAIN_PATHDB)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_TIME_DURATION)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_MOUNT_DURATION)
+	if err != nil {
+		return err
+	}
+	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindPFlags(addressCommend)
 	if err != nil {
 		return err
 	}
@@ -165,6 +190,7 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	log.Println("Agent initalzing on: ", hostname)
 	AgentConfiguration = Configuration{
 		VaultConfig: vaultConfig,
@@ -175,18 +201,50 @@ func Init(vaultConfig *vault.Config, args []string) error {
 		return err
 	}
 
-	if viper.IsSet("address") {
-		AgentConfiguration.Address = viper.GetString("address")
+	if viper.IsSet(MAIN_ADDRESS) {
+		AgentConfiguration.Address = viper.GetString(MAIN_ADDRESS)
+		vaultConfig.Address = AgentConfiguration.Address
 	} else {
 		AgentConfiguration.Address = "localhost:8081"
 	}
 
-	if viper.IsSet("pathdb") {
-		AgentConfiguration.PathDB = viper.GetString("pathdb")
+	if viper.IsSet(MAIN_PATHDB) {
+		AgentConfiguration.PathDB = viper.GetString(MAIN_PATHDB)
 	} else {
-		AgentConfiguration.PathDB = ""
+		AgentConfiguration.PathDB = "/opt/agent/db"
 	}
 
+	var dur time.Duration
+	if viper.IsSet(MAIN_TIME_DURATION) {
+		dur, err = time.ParseDuration(viper.GetString(MAIN_TIME_DURATION))
+		if err != nil {
+			log.Println("Error parsing duration: ", err)
+		}
+	} else {
+		dur, err = time.ParseDuration("30m")
+		if err != nil {
+			log.Println("Error parsing duration: ", err)
+		}
+	}
+
+	if viper.IsSet(MAIN_MOUNT_DURATION) {
+		AgentConfiguration.MountDuration = viper.GetString(MAIN_MOUNT_DURATION)
+	} else {
+		AgentConfiguration.MountDuration = ""
+	}
+
+	if viper.IsSet(MAIN_MOUNT_ALLOW) {
+		AgentConfiguration.MountAllow = viper.GetBool(MAIN_MOUNT_ALLOW)
+	} else {
+		AgentConfiguration.MountAllow = false
+	}
+
+	AgentConfiguration.TimeBetweenStart = dur
+
+	log.Println("Agent Configuration:",
+		"\nAddress: ", AgentConfiguration.Address,
+		"\nPath to DB:", AgentConfiguration.PathDB,
+		"\nTime Between Backup Runs: ", AgentConfiguration.TimeBetweenStart)
 	return nil
 }
 
@@ -228,7 +286,7 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 
 func Start(Duration string, AllowOther bool) {
 	if AgentConfiguration.DB == nil {
-		log.Println("Database is not initialized")
+		log.Println(ERROR_DATABASE_NOT_FOUND)
 		return
 	}
 
@@ -301,8 +359,15 @@ func Start(Duration string, AllowOther bool) {
 		}
 		bodyString := string(bodyBytes)
 		log.Println("Error while backup: ", bodyString)
+	} else {
+		UpdateTimestamp(AgentConfiguration.DB, time.Now())
 	}
 
+}
+
+func run() {
+	Start(AgentConfiguration.MountDuration, AgentConfiguration.MountAllow)
+	AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
 }
 
 func main() {
@@ -310,6 +375,10 @@ func main() {
 	//log.Print("Please enter Token: ")
 	//password, err := terminal.ReadPassword(int(syscall.Stdin))
 	HandleError(err)
+	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, false)
 	_, fun := RunRestServer("localhost:8081")
+
+	go run()
+	log.Println("Starting the Rest Server")
 	fun()
 }

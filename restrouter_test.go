@@ -22,6 +22,8 @@ func setupRestrouterTest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
 	os.Setenv("AGENT_ADDRESS", testconfig.config.Address)
+	os.Setenv("AGENT_DURATION", testconfig.Duration)
+	os.Setenv("AGENT_PATHDB", "./test/DB")
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 

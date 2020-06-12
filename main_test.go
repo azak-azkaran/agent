@@ -12,6 +12,7 @@ import (
 	"time"
 
 	cqueue "github.com/enriquebris/goconcurrentqueue"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -105,21 +106,44 @@ func TestMainInit(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test with flags
-	os.Args = append(os.Args, "--address="+MAIN_TEST_ADDRESS)
-	err = Init(testconfig.config, os.Args[2:])
+	var args []string
+	args = append(args, "--address="+MAIN_TEST_ADDRESS)
+	args = append(args, "--pathdb="+MAIN_TEST_PATHDB)
+	args = append(args, "--duration="+MAIN_TEST_DURATION)
+	args = append(args, "--mount-duration="+MAIN_TEST_MOUNT_DURATION)
+	args = append(args, "--mount-allow="+MAIN_TEST_MOUNT_ALLOW)
+
+	err = Init(testconfig.config, args)
 	require.NoError(t, err)
 	assert.Equal(t, AgentConfiguration.Hostname, hostname)
 	assert.Equal(t, AgentConfiguration.Address, MAIN_TEST_ADDRESS)
+	assert.Equal(t, AgentConfiguration.PathDB, MAIN_TEST_PATHDB)
+	assert.Equal(t, AgentConfiguration.MountAllow, false)
+	assert.Equal(t, AgentConfiguration.MountDuration, MAIN_TEST_MOUNT_DURATION)
+
+	dur, err := time.ParseDuration("1h30m")
+	assert.NoError(t, err)
+
+	assert.Equal(t, AgentConfiguration.TimeBetweenStart, dur)
 	length := len(os.Args)
 
 	os.Args = os.Args[:length-1]
 
 	// Test with Environment variables
 	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
-	err = Init(testconfig.config, os.Args[2:])
+	os.Setenv("AGENT_PATHDB", MAIN_TEST_PATHDB)
+	os.Setenv("AGENT_DURATION", MAIN_TEST_DURATION)
+	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+
+	err = Init(testconfig.config, args)
 	require.NoError(t, err)
 	assert.Equal(t, AgentConfiguration.Hostname, hostname)
 	assert.Equal(t, AgentConfiguration.Address, MAIN_TEST_ADDRESS)
+	assert.Equal(t, AgentConfiguration.PathDB, MAIN_TEST_PATHDB)
+	assert.Equal(t, AgentConfiguration.TimeBetweenStart, dur)
+	assert.Equal(t, AgentConfiguration.MountAllow, false)
+	assert.Equal(t, AgentConfiguration.MountDuration, MAIN_TEST_MOUNT_DURATION)
 	assert.NotNil(t, ConcurrentQueue)
 }
 
@@ -188,6 +212,60 @@ func TestMainStart(t *testing.T) {
 	err = RemoveContents(BACKUP_TEST_FOLDER)
 	assert.NoError(t, err)
 	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
+
+	err = RemoveContents("./test/DB/")
+	assert.NoError(t, err)
+	assert.NoFileExists(t, "./test/DB/MANIFEST")
+	time.Sleep(1 * time.Millisecond)
+}
+
+func TestMainMain(t *testing.T) {
+	fmt.Println("running: TestMainMain")
+	gin.SetMode(gin.TestMode)
+	runMock = true
+	testconfig := readConfig(t)
+	os.Setenv("AGENT_ADDRESS", testconfig.config.Address)
+	os.Setenv("AGENT_DURATION", testconfig.Duration)
+	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+
+	_, err := Unseal(testconfig.config, testconfig.secret)
+	require.NoError(t, err)
+
+	go main()
+	time.Sleep(1 * time.Second)
+
+	resp, err := http.Get("http://localhost:8081/ping")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	tokenMessage := TokenMessage{
+		Token: "randomtoken",
+	}
+	reqBody, err := json.Marshal(tokenMessage)
+	require.NoError(t, err)
+
+	fmt.Println("Sending Body:", string(reqBody))
+	_, err = http.Post("http://localhost:8081/token",
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+
+	token, err := GetToken(AgentConfiguration.DB)
+	assert.NoError(t, err)
+	assert.Equal(t, "randomtoken", token)
+
+	time.Sleep(10 * time.Second)
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = RemoveContents(BACKUP_TEST_FOLDER)
+	assert.NoError(t, err)
+	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
+
+	is, err := IsEmpty("./test/tmp-mount")
+	assert.NoError(t, err)
+	assert.True(t, is)
 
 	err = RemoveContents("./test/DB/")
 	assert.NoError(t, err)

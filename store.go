@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"time"
 
@@ -25,6 +26,9 @@ func InitDB(path string, debug bool) *badger.DB {
 }
 
 func Get(db *badger.DB, key string) (string, error) {
+	if db == nil {
+		return "", errors.New(ERROR_DATABASE_NOT_FOUND)
+	}
 	var valCopy []byte
 	err := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(key))
@@ -46,6 +50,9 @@ func Get(db *badger.DB, key string) (string, error) {
 }
 
 func Put(db *badger.DB, key string, value string) (bool, error) {
+	if db == nil {
+		return false, errors.New(ERROR_DATABASE_NOT_FOUND)
+	}
 	var ok bool
 	err := db.Update(func(txn *badger.Txn) error {
 		e := badger.NewEntry([]byte(key), []byte(value))

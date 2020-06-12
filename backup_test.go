@@ -43,7 +43,8 @@ func TestBackupDoBackup(t *testing.T) {
 		RESTIC_REPOSITORY + BACKUP_TEST_FOLDER,
 	}
 
-	os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
+	err = os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
+	assert.NoError(t, err)
 
 	cmd := InitRepo(env)
 	require.DirExists(t, BACKUP_TEST_FOLDER)
@@ -73,10 +74,12 @@ func TestBackupExistsRepo(t *testing.T) {
 		RESTIC_PASSWORD + "hallo",
 		RESTIC_REPOSITORY + BACKUP_TEST_FOLDER,
 	}
-	os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
+	err := os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
+	assert.NoError(t, err)
+
 	cmd := ExistsRepo(env)
 	assert.Contains(t, cmd.String(), "restic snapshots")
-	err := RunJob(cmd, "test")
+	err = RunJob(cmd, "test")
 	assert.Error(t, err)
 
 	cmd = InitRepo(env)

@@ -31,7 +31,7 @@ func StartServer(t *testing.T, address string) {
 	}
 	go func() {
 		running = true
-		log.Println("Starting server")
+		log.Println("Starting MOCK server")
 		err := server.ListenAndServe()
 		require.Equal(t, http.ErrServerClosed, err)
 		running = false
@@ -54,21 +54,25 @@ func StopServer() {
 func createHandler() http.Handler {
 	r := gin.Default()
 	r.GET("/v1/sys/seal-status", func(c *gin.Context) {
+		log.Println("MOCK-Server: called seal-status")
 		var msg vault.SealStatusResponse
 		msg.Sealed = sealStatus
 		c.JSON(http.StatusOK, msg)
 	})
 	r.PUT("/v1/sys/unseal", func(c *gin.Context) {
+		log.Println("MOCK-Server: called unseal")
 		var msg vault.SealStatusResponse
 		sealStatus = false
 		msg.Sealed = sealStatus
 		c.JSON(http.StatusOK, msg)
 	})
 	r.PUT("/v1/sys/seal", func(c *gin.Context) {
+		log.Println("MOCK-Server: called seal")
 		sealStatus = true
 		c.JSON(http.StatusOK, nil)
 	})
 	r.GET("/v1/restic/data/resticpath", func(c *gin.Context) {
+		log.Println("MOCK-Server: called resticpath")
 		var msg vault.Secret
 		data := make(map[string]interface{})
 		secret := make(map[string]string)
@@ -91,6 +95,7 @@ func createHandler() http.Handler {
 			config(c)
 			return
 		}
+		log.Println("MOCK-Server: invalid config")
 		var arr []string
 		c.JSON(404, gin.H{"error": arr})
 	})
@@ -100,6 +105,7 @@ func createHandler() http.Handler {
 }
 
 func gocrypt(c *gin.Context) {
+	log.Println("MOCK-Server: called gocrypt")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 	secret := make(map[string]string)
@@ -114,6 +120,7 @@ func gocrypt(c *gin.Context) {
 }
 
 func config(c *gin.Context) {
+	log.Println("MOCK-Server: called config")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 

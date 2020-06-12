@@ -21,6 +21,7 @@ type TestConfig struct {
 	configpath  string
 	secret      string
 	config      *vault.Config
+	Duration    string
 }
 
 func readConfig(t *testing.T) TestConfig {
@@ -45,6 +46,7 @@ func readConfig(t *testing.T) TestConfig {
 		gocryptpath: viper.GetString("gocryptpath"),
 		configpath:  viper.GetString("configpath"),
 		secret:      viper.GetString("secret"),
+		Duration:    viper.GetString("duration"),
 	}
 
 	if runMock {

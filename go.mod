@@ -13,7 +13,7 @@ require (
 	github.com/enriquebris/goconcurrentqueue v0.6.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-gonic/gin v1.6.3
-	github.com/golang/protobuf v1.4.1 // indirect
+	github.com/golang/protobuf v1.4.1
 	github.com/golangci/golangci-lint v1.26.0 // indirect
 	github.com/gopasspw/gopass v1.9.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
