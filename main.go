@@ -146,7 +146,7 @@ func DontRun(cmd *exec.Cmd, name string) error {
 	return nil
 }
 
-func bindEnviorment(vaultConfig *vault.Config) (AgentConfiguration, error) {
+func bindEnviorment(vaultConfig *vault.Config) (*Configuration, error) {
 	viper.SetEnvPrefix("agent")
 	err := viper.BindEnv(MAIN_ADDRESS)
 	if err != nil {
@@ -182,7 +182,7 @@ func bindEnviorment(vaultConfig *vault.Config) (AgentConfiguration, error) {
 		VaultConfig: vaultConfig,
 		Hostname:    hostname,
 	}
-	return config, nil
+	return &config, nil
 }
 
 func parseConfiguration(confi Configuration) Configuration {
@@ -251,7 +251,7 @@ func Init(vaultConfig *vault.Config, args []string) error {
 		return err
 	}
 
-	AgentConfiguration = parseConfiguration(confi)
+	AgentConfiguration = parseConfiguration(*confi)
 
 	return nil
 }
