@@ -309,6 +309,17 @@ func postToken(c *gin.Context) {
 	}
 }
 
+func getToken(c *gin.Context) {
+	token, err := GetToken(AgentConfiguration.DB)
+	if err != nil {
+		returnErr(err, ERROR_PUT_TOKEN, c)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"token": token,
+	})
+}
+
 func RunRestServer(address string) (*http.Server, func()) {
 	server := &http.Server{
 		Addr:    "localhost:8081",
@@ -341,5 +352,6 @@ func CreateRestHandler() http.Handler {
 	r.GET("/is_sealed", getIsSealed)
 	r.GET("/status", getStatus)
 	r.GET("/logs", getLog)
+	r.GET("/token", getToken)
 	return r
 }

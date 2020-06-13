@@ -385,6 +385,17 @@ func TestRestPostToken(t *testing.T) {
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = http.Get("http://localhost:8081/token")
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	bodyString := string(bodyBytes)
+	assert.Contains(t, bodyString, tokenMessage.Token)
+
 	assert.NotEmpty(t, ConcurrentQueue)
 
 	ok := CheckToken(AgentConfiguration.DB)

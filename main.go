@@ -146,6 +146,89 @@ func DontRun(cmd *exec.Cmd, name string) error {
 	return nil
 }
 
+func bindEnviorment(vaultConfig *vault.Config) (AgentConfiguration, error) {
+	viper.SetEnvPrefix("agent")
+	err := viper.BindEnv(MAIN_ADDRESS)
+	if err != nil {
+		return nil, err
+	}
+
+	err = viper.BindEnv(MAIN_PATHDB)
+	if err != nil {
+		return nil, err
+	}
+
+	err = viper.BindEnv(MAIN_TIME_DURATION)
+	if err != nil {
+		return nil, err
+	}
+
+	err = viper.BindEnv(MAIN_MOUNT_DURATION)
+	if err != nil {
+		return nil, err
+	}
+	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
+	if err != nil {
+		return nil, err
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("Agent initalzing on: ", hostname)
+	config := Configuration{
+		VaultConfig: vaultConfig,
+		Hostname:    hostname,
+	}
+	return config, nil
+}
+
+func parseConfiguration(confi Configuration) Configuration {
+	if viper.IsSet(MAIN_ADDRESS) {
+		confi.Address = viper.GetString(MAIN_ADDRESS)
+		confi.VaultConfig.Address = AgentConfiguration.Address
+	} else {
+		confi.Address = "localhost:8081"
+	}
+
+	if viper.IsSet(MAIN_PATHDB) {
+		confi.PathDB = viper.GetString(MAIN_PATHDB)
+	} else {
+		confi.PathDB = "/opt/agent/db"
+	}
+
+	if viper.IsSet(MAIN_TIME_DURATION) {
+		dur, err := time.ParseDuration(viper.GetString(MAIN_TIME_DURATION))
+		if err != nil {
+			log.Println("Error parsing duration: ", err)
+			dur = 30 * time.Minute
+		}
+		confi.TimeBetweenStart = dur
+	} else {
+		confi.TimeBetweenStart = 30 * time.Minute
+	}
+
+	if viper.IsSet(MAIN_MOUNT_DURATION) {
+		confi.MountDuration = viper.GetString(MAIN_MOUNT_DURATION)
+	} else {
+		confi.MountDuration = ""
+	}
+
+	if viper.IsSet(MAIN_MOUNT_ALLOW) {
+		confi.MountAllow = viper.GetBool(MAIN_MOUNT_ALLOW)
+	} else {
+		confi.MountAllow = false
+	}
+
+	log.Println("Agent Configuration:",
+		"\nAddress: ", confi.Address,
+		"\nPath to DB:", confi.PathDB,
+		"\nTime Between Backup Runs: ", confi.TimeBetweenStart)
+	return confi
+}
+
 func Init(vaultConfig *vault.Config, args []string) error {
 	ConcurrentQueue = cqueue.NewFIFO()
 	jobmap = cmap.New()
@@ -156,95 +239,20 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend.String(MAIN_MOUNT_DURATION, "", "The Duration how long the gocrypt should be mounted")
 	addressCommend.String(MAIN_MOUNT_ALLOW, "true", "If the gocrypt mount should be allowed by other users")
 
-	viper.SetEnvPrefix("agent")
-	err := viper.BindEnv(MAIN_ADDRESS)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_PATHDB)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_TIME_DURATION)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_MOUNT_DURATION)
-	if err != nil {
-		return err
-	}
-	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
-	if err != nil {
-		return err
-	}
+	confi, err := bindEnviorment(vaultConfig)
 
 	err = viper.BindPFlags(addressCommend)
 	if err != nil {
 		return err
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-
-	log.Println("Agent initalzing on: ", hostname)
-	AgentConfiguration = Configuration{
-		VaultConfig: vaultConfig,
-		Hostname:    hostname,
-	}
 	err = addressCommend.Parse(args)
 	if err != nil {
 		return err
 	}
 
-	if viper.IsSet(MAIN_ADDRESS) {
-		AgentConfiguration.Address = viper.GetString(MAIN_ADDRESS)
-		vaultConfig.Address = AgentConfiguration.Address
-	} else {
-		AgentConfiguration.Address = "localhost:8081"
-	}
+	AgentConfiguration = parseConfiguration(confi)
 
-	if viper.IsSet(MAIN_PATHDB) {
-		AgentConfiguration.PathDB = viper.GetString(MAIN_PATHDB)
-	} else {
-		AgentConfiguration.PathDB = "/opt/agent/db"
-	}
-
-	var dur time.Duration
-	if viper.IsSet(MAIN_TIME_DURATION) {
-		dur, err = time.ParseDuration(viper.GetString(MAIN_TIME_DURATION))
-		if err != nil {
-			log.Println("Error parsing duration: ", err)
-		}
-	} else {
-		dur, err = time.ParseDuration("30m")
-		if err != nil {
-			log.Println("Error parsing duration: ", err)
-		}
-	}
-
-	if viper.IsSet(MAIN_MOUNT_DURATION) {
-		AgentConfiguration.MountDuration = viper.GetString(MAIN_MOUNT_DURATION)
-	} else {
-		AgentConfiguration.MountDuration = ""
-	}
-
-	if viper.IsSet(MAIN_MOUNT_ALLOW) {
-		AgentConfiguration.MountAllow = viper.GetBool(MAIN_MOUNT_ALLOW)
-	} else {
-		AgentConfiguration.MountAllow = false
-	}
-
-	AgentConfiguration.TimeBetweenStart = dur
-
-	log.Println("Agent Configuration:",
-		"\nAddress: ", AgentConfiguration.Address,
-		"\nPath to DB:", AgentConfiguration.PathDB,
-		"\nTime Between Backup Runs: ", AgentConfiguration.TimeBetweenStart)
 	return nil
 }
 
@@ -378,7 +386,10 @@ func main() {
 	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, false)
 	_, fun := RunRestServer("localhost:8081")
 
-	go run()
+	go func() {
+		log.Println("Starting Run Function in 5 Seconds")
+		time.AfterFunc(5*time.Second, run)
+	}()
 	log.Println("Starting the Rest Server")
 	fun()
 }
