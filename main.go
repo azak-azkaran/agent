@@ -146,49 +146,38 @@ func DontRun(cmd *exec.Cmd, name string) error {
 	return nil
 }
 
-func bindEnviorment(vaultConfig *vault.Config) (*Configuration, error) {
+func bindEnviorment() error {
 	viper.SetEnvPrefix("agent")
 	err := viper.BindEnv(MAIN_ADDRESS)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = viper.BindEnv(MAIN_PATHDB)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = viper.BindEnv(MAIN_TIME_DURATION)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = viper.BindEnv(MAIN_MOUNT_DURATION)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Println("Agent initalzing on: ", hostname)
-	config := Configuration{
-		VaultConfig: vaultConfig,
-		Hostname:    hostname,
-	}
-	return &config, nil
+	return nil
 }
 
-func parseConfiguration(confi Configuration) Configuration {
+func parseConfiguration(confi *Configuration) {
 	if viper.IsSet(MAIN_ADDRESS) {
 		confi.Address = viper.GetString(MAIN_ADDRESS)
-		confi.VaultConfig.Address = AgentConfiguration.Address
 	} else {
 		confi.Address = "localhost:8081"
 	}
@@ -222,11 +211,13 @@ func parseConfiguration(confi Configuration) Configuration {
 		confi.MountAllow = false
 	}
 
+	log.Println("Agent initalzing on: ", confi.Hostname)
 	log.Println("Agent Configuration:",
 		"\nAddress: ", confi.Address,
 		"\nPath to DB:", confi.PathDB,
-		"\nTime Between Backup Runs: ", confi.TimeBetweenStart)
-	return confi
+		"\nTime Between Backup Runs: ", confi.TimeBetweenStart,
+		"\nVaultAddress: ", confi.VaultConfig.Address,
+	)
 }
 
 func Init(vaultConfig *vault.Config, args []string) error {
@@ -239,7 +230,20 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend.String(MAIN_MOUNT_DURATION, "", "The Duration how long the gocrypt should be mounted")
 	addressCommend.String(MAIN_MOUNT_ALLOW, "true", "If the gocrypt mount should be allowed by other users")
 
-	confi, err := bindEnviorment(vaultConfig)
+	err := bindEnviorment()
+	if err != nil {
+		return err
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	config := Configuration{
+		VaultConfig: vaultConfig,
+		Hostname:    hostname,
+	}
 
 	err = viper.BindPFlags(addressCommend)
 	if err != nil {
@@ -251,8 +255,8 @@ func Init(vaultConfig *vault.Config, args []string) error {
 		return err
 	}
 
-	AgentConfiguration = parseConfiguration(*confi)
-
+	parseConfiguration(&config)
+	AgentConfiguration = config
 	return nil
 }
 
@@ -322,7 +326,7 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	resp, err := http.Post("http://localhost:8081/mount",
+	resp, err := http.Post("http://"+AgentConfiguration.Address+"/mount",
 		"application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Println(ERROR_SENDING_REQUEST, err)
@@ -351,7 +355,7 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	resp, err = http.Post("http://localhost:8081/backup",
+	resp, err = http.Post("http://"+AgentConfiguration.Address+"/backup",
 		"application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Println(ERROR_SENDING_REQUEST, err)
@@ -384,7 +388,7 @@ func main() {
 	//password, err := terminal.ReadPassword(int(syscall.Stdin))
 	HandleError(err)
 	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, false)
-	_, fun := RunRestServer("localhost:8081")
+	_, fun := RunRestServer(AgentConfiguration.Address)
 
 	go func() {
 		log.Println("Starting Run Function in 5 Seconds")

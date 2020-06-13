@@ -61,9 +61,19 @@ const (
 	VAULT_TEST_BACKUP_SECRET_KEY   = "secret.key"
 	VAULT_TEST_BACKUP_ACCESS_KEY   = "access.key"
 
-	MAIN_TEST_ADDRESS        = "localhost:8081"
+	MAIN_TEST_ADDRESS        = "localhost:8031"
 	MAIN_TEST_PATHDB         = "./test/DB"
 	MAIN_TEST_DURATION       = "1h30m"
 	MAIN_TEST_MOUNT_DURATION = "5s"
 	MAIN_TEST_MOUNT_ALLOW    = "false"
+
+	REST_TEST_TOKEN     = "http://localhost:8031/token"
+	REST_TEST_LOG       = "http://localhost:8031/logs"
+	REST_TEST_BACKUP    = "http://localhost:8031/backup"
+	REST_TEST_STATUS    = "http://localhost:8031/status"
+	REST_TEST_MOUNT     = "http://localhost:8031/mount"
+	REST_TEST_UNSEAL    = "http://localhost:8031/unseal"
+	REST_TEST_IS_SEALED = "http://localhost:8031/is_sealed"
+	REST_TEST_SEAL      = "http://localhost:8031/seal"
+	REST_TEST_PING      = "http://localhost:8031/ping"
 )

@@ -31,7 +31,7 @@ func StartServer(t *testing.T, address string) {
 	}
 	go func() {
 		running = true
-		log.Println("Starting MOCK server")
+		log.Println("Starting MOCK server at: ", server.Addr)
 		err := server.ListenAndServe()
 		require.Equal(t, http.ErrServerClosed, err)
 		running = false

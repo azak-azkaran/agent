@@ -322,7 +322,7 @@ func getToken(c *gin.Context) {
 
 func RunRestServer(address string) (*http.Server, func()) {
 	server := &http.Server{
-		Addr:    "localhost:8081",
+		Addr:    address,
 		Handler: CreateRestHandler(),
 	}
 	fun := func() {

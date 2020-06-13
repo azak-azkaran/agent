@@ -13,6 +13,7 @@ import (
 
 	cqueue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/gin-gonic/gin"
+	cmap "github.com/orcaman/concurrent-map"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,7 +79,7 @@ func TestMainGetConfigFromVault(t *testing.T) {
 	fmt.Println("running: TestMainGetConfigFromVault")
 	testconfig := readConfig(t)
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
@@ -168,14 +169,29 @@ func TestMainQueueJobStatus(t *testing.T) {
 
 func TestMainStart(t *testing.T) {
 	fmt.Println("running: TestMainStart")
-	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
 
+	ConcurrentQueue = cqueue.NewFIFO()
+	jobmap = cmap.New()
+	gin.SetMode(gin.TestMode)
+	testconfig := readConfig(t)
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
+	os.Setenv("AGENT_DURATION", testconfig.Duration)
+	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	err := Init(testconfig.config, os.Args)
+	require.NoError(t, err)
+
+	_, err = Unseal(testconfig.config, testconfig.secret)
+	require.NoError(t, err)
+
+	AgentConfiguration.DB = InitDB("", true)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	go fun()
-	assert.NotNil(t, AgentConfiguration.DB)
 
 	time.Sleep(1 * time.Millisecond)
-	Start("5s", false)
+	go Start("5s", false)
+	time.Sleep(1 * time.Millisecond)
 
 	tokenMessage := TokenMessage{
 		Token: "randomtoken",
@@ -184,7 +200,7 @@ func TestMainStart(t *testing.T) {
 	require.NoError(t, err)
 
 	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post("http://localhost:8081/token",
+	resp, err := http.Post(REST_TEST_TOKEN,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
@@ -222,9 +238,8 @@ func TestMainStart(t *testing.T) {
 func TestMainMain(t *testing.T) {
 	fmt.Println("running: TestMainMain")
 	gin.SetMode(gin.TestMode)
-	runMock = true
 	testconfig := readConfig(t)
-	os.Setenv("AGENT_ADDRESS", testconfig.config.Address)
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
@@ -236,7 +251,7 @@ func TestMainMain(t *testing.T) {
 	go main()
 	time.Sleep(1 * time.Second)
 
-	resp, err := http.Get("http://localhost:8081/ping")
+	resp, err := http.Get(REST_TEST_PING)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -247,7 +262,7 @@ func TestMainMain(t *testing.T) {
 	require.NoError(t, err)
 
 	fmt.Println("Sending Body:", string(reqBody))
-	_, err = http.Post("http://localhost:8081/token",
+	_, err = http.Post(REST_TEST_TOKEN,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 

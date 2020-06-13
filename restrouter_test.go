@@ -21,7 +21,7 @@ import (
 func setupRestrouterTest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
-	os.Setenv("AGENT_ADDRESS", testconfig.config.Address)
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	err := Init(testconfig.config, os.Args)
@@ -36,7 +36,7 @@ func TestRestCreateRestHandler(t *testing.T) {
 	fmt.Println("running: TestRestCreateRestHandler")
 	setupRestrouterTest(t)
 	server := &http.Server{
-		Addr:    "localhost:8081",
+		Addr:    MAIN_TEST_ADDRESS,
 		Handler: CreateRestHandler(),
 	}
 	go func() {
@@ -55,13 +55,13 @@ func TestRestCreateRestHandler(t *testing.T) {
 func TestRestRunRestServer(t *testing.T) {
 	fmt.Println("running: TestRestRunRestServer")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 	log.Println("Agent rest server startet on: ", server.Addr)
 
-	resp, err := http.Get("http://localhost:8081/ping")
+	resp, err := http.Get(REST_TEST_PING)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -81,7 +81,7 @@ func TestRestRunRestServer(t *testing.T) {
 func TestRestHandleSeal(t *testing.T) {
 	fmt.Println("running: TestRestRunRestServer")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
@@ -93,7 +93,8 @@ func TestRestHandleSeal(t *testing.T) {
 	require.NoError(t, err)
 
 	//check seal
-	resp, err := http.Get("http://localhost:8081/is_sealed")
+	log.Println("address:", AgentConfiguration.VaultConfig.Address)
+	resp, err := http.Get(REST_TEST_IS_SEALED)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -103,7 +104,7 @@ func TestRestHandleSeal(t *testing.T) {
 	assert.Equal(t, bodyStr, "{\"message\":false}")
 
 	//seal vault
-	resp, err = http.Post("http://localhost:8081/seal",
+	resp, err = http.Post(REST_TEST_SEAL,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
@@ -114,7 +115,7 @@ func TestRestHandleSeal(t *testing.T) {
 	assert.Equal(t, bodyStr, "{\"message\":true}")
 
 	// check seal
-	resp, err = http.Get("http://localhost:8081/is_sealed")
+	resp, err = http.Get(REST_TEST_IS_SEALED)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -124,7 +125,7 @@ func TestRestHandleSeal(t *testing.T) {
 	assert.Equal(t, bodyStr, "{\"message\":true}")
 
 	// unseal vault
-	resp, err = http.Post("http://localhost:8081/unseal",
+	resp, err = http.Post(REST_TEST_UNSEAL,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
@@ -145,7 +146,7 @@ func TestRestHandleSeal(t *testing.T) {
 func TestRestPostBackup(t *testing.T) {
 	fmt.Println("running: TestRestPostBackup")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	backupMsg := BackupMessage{
 		Mode:  "backup",
 		Test:  true,
@@ -162,7 +163,7 @@ func TestRestPostBackup(t *testing.T) {
 	require.NoError(t, err)
 
 	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post("http://localhost:8081/backup",
+	resp, err := http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
@@ -175,7 +176,7 @@ func TestRestPostBackup(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("Sending Body:", string(reqBody))
 
-	resp, err = http.Post("http://localhost:8081/backup",
+	resp, err = http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -185,7 +186,7 @@ func TestRestPostBackup(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("Sending Body:", string(reqBody))
 
-	resp, err = http.Post("http://localhost:8081/backup",
+	resp, err = http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Millisecond)
@@ -197,7 +198,7 @@ func TestRestPostBackup(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println("Sending Body:", string(reqBody))
 
-	resp, err = http.Post("http://localhost:8081/backup",
+	resp, err = http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -236,7 +237,7 @@ func TestRestPostBackup(t *testing.T) {
 func TestRestPostMount(t *testing.T) {
 	fmt.Println("running: TestRestPostMount")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	mountMsg := MountMessage{
 		Test:       true,
 		Token:      "randomtoken",
@@ -250,7 +251,7 @@ func TestRestPostMount(t *testing.T) {
 	reqBody, err := json.Marshal(mountMsg)
 	require.NoError(t, err)
 
-	resp, err := http.Post("http://localhost:8081/mount",
+	resp, err := http.Post(REST_TEST_MOUNT,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
@@ -262,7 +263,7 @@ func TestRestPostMount(t *testing.T) {
 	reqBody, err = json.Marshal(mountMsg)
 	require.NoError(t, err)
 
-	resp, err = http.Post("http://localhost:8081/mount",
+	resp, err = http.Post(REST_TEST_MOUNT,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
@@ -283,7 +284,7 @@ func TestRestPostMount(t *testing.T) {
 func TestRestStatus(t *testing.T) {
 	fmt.Println("running: TestRestStatus")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	backupMsg := BackupMessage{
 		Mode:  "init",
 		Run:   true,
@@ -297,18 +298,18 @@ func TestRestStatus(t *testing.T) {
 
 	reqBody, err := json.Marshal(backupMsg)
 	require.NoError(t, err)
-	_, err = http.Post("http://localhost:8081/backup",
+	_, err = http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 
 	backupMsg.Mode = "check"
 	reqBody, err = json.Marshal(backupMsg)
 	require.NoError(t, err)
-	_, err = http.Post("http://localhost:8081/backup",
+	_, err = http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 
-	resp, err := http.Get("http://localhost:8081/status")
+	resp, err := http.Get(REST_TEST_STATUS)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -326,7 +327,7 @@ func TestRestStatus(t *testing.T) {
 func TestRestGetLog(t *testing.T) {
 	fmt.Println("running: TestRestGetLog")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	backupMsg := BackupMessage{
 		Mode:  "blub",
 		Test:  true,
@@ -343,14 +344,14 @@ func TestRestGetLog(t *testing.T) {
 	require.NoError(t, err)
 
 	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post("http://localhost:8081/backup",
+	resp, err := http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	assert.NotEmpty(t, ConcurrentQueue)
 
-	resp, err = http.Get("http://localhost:8081/logs")
+	resp, err = http.Get(REST_TEST_LOG)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -367,7 +368,7 @@ func TestRestGetLog(t *testing.T) {
 func TestRestPostToken(t *testing.T) {
 	fmt.Println("running: TestRestPostToken")
 	setupRestrouterTest(t)
-	server, fun := RunRestServer("localhost:8081")
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	tokenMessage := TokenMessage{
 		Token: "randomtoken",
 	}
@@ -380,13 +381,13 @@ func TestRestPostToken(t *testing.T) {
 	require.NoError(t, err)
 
 	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post("http://localhost:8081/token",
+	resp, err := http.Post(REST_TEST_TOKEN,
 		"application/json", bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	resp, err = http.Get("http://localhost:8081/token")
+	resp, err = http.Get(REST_TEST_TOKEN)
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)

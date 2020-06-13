@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var runMock bool = os.Getenv("RUN_MOCK") == "true"
-
 type TestConfig struct {
 	token       string
 	resticpath  string
@@ -26,13 +24,9 @@ type TestConfig struct {
 
 func readConfig(t *testing.T) TestConfig {
 	ConcurrentQueue = cqueue.NewFIFO()
-	if runMock {
-		require.FileExists(t, "./test/secret_mock.yml", "Token file not found")
-		viper.SetConfigName("secret_mock.yml")
-	} else {
-		require.FileExists(t, "./test/secret.yml", "Token file not found")
-		viper.SetConfigName("secret.yml")
-	}
+
+	require.FileExists(t, "./test/secret_mock.yml", "Token file not found")
+	viper.SetConfigName("secret_mock.yml")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath("test")
 	require.NoError(t, viper.ReadInConfig())
@@ -49,16 +43,10 @@ func readConfig(t *testing.T) TestConfig {
 		Duration:    viper.GetString("duration"),
 	}
 
-	if runMock {
-		conf.config = &vault.Config{
-			Address: "http://localhost:2200",
-		}
-		StartServer(t, conf.config.Address)
-	} else {
-		conf.config = &vault.Config{
-			Address: "http://localhost:8200",
-		}
+	conf.config = &vault.Config{
+		Address: "http://localhost:2200",
 	}
+	StartServer(t, conf.config.Address)
 	return conf
 }
 
@@ -130,10 +118,7 @@ func TestVaultGetAgentConfig(t *testing.T) {
 
 func TestVaultUnseal(t *testing.T) {
 	fmt.Println("running: TestVaultUnseal")
-	if !runMock {
-		fmt.Println("Test can only be run in Mock mode")
-		return
-	}
+
 	testconfig := readConfig(t)
 	err := Seal(testconfig.config, VAULT_TEST_TOKEN)
 	require.NoError(t, err)
