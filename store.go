@@ -1,14 +1,19 @@
 package main
 
 import (
+	"encoding/binary"
 	"errors"
 	"log"
+	"strconv"
 	"time"
+
+	crypto_rand "crypto/rand"
+	math_rand "math/rand"
 
 	badger "github.com/dgraph-io/badger/v2"
 )
 
-func InitDB(path string, debug bool) *badger.DB {
+func InitDB(path string, masterkey string, debug bool) *badger.DB {
 	var opt badger.Options
 	if debug {
 		log.Println("Debug is on switching to InMemory")
@@ -16,6 +21,10 @@ func InitDB(path string, debug bool) *badger.DB {
 		opt = badger.DefaultOptions("").WithInMemory(true)
 	} else {
 		opt = badger.DefaultOptions(path)
+	}
+
+	if masterkey != "" {
+		opt.WithEncryptionKey([]byte(masterkey))
 	}
 
 	db, err := badger.Open(opt)
@@ -109,5 +118,50 @@ func GetToken(db *badger.DB) (string, error) {
 }
 
 func PutToken(db *badger.DB, token string) (bool, error) {
+	log.Println("Adding Token")
 	return Put(db, STORE_TOKEN, token)
+}
+
+func CheckSealKey(db *badger.DB, shares int) bool {
+	for i := 1; i < shares+1; i++ {
+		value, err := Get(db, STORE_KEY+strconv.Itoa(shares))
+		if err != nil {
+			return false
+		}
+
+		if value == "" {
+			return false
+		}
+	}
+	return true
+
+}
+
+func PutSealKey(db *badger.DB, key string, shares int) (bool, error) {
+	log.Println("Adding seal key, ", shares)
+	return Put(db, STORE_KEY+strconv.Itoa(shares), key)
+}
+
+func GetSealKey(db *badger.DB, threshold int, totalShares int) []string {
+	var b [8]byte
+	_, err := crypto_rand.Read(b[:])
+	var values []string
+	if err != nil {
+		log.Println("cannot seed math/rand package with cryptographically secure random number generator")
+		return values
+	}
+
+	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+
+	permutation := math_rand.Perm(totalShares)
+	for i := 0; i < threshold; i++ {
+		v := permutation[i] + 1
+		value, err := Get(db, STORE_KEY+strconv.Itoa(v))
+		if err != nil {
+			log.Println(ERROR_KEY_NOT_FOUND, err)
+		} else {
+			values = append(values, value)
+		}
+	}
+	return values
 }

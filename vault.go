@@ -76,6 +76,21 @@ func Unseal(config *vault.Config, key string) (*vault.SealStatusResponse, error)
 	return resp, nil
 }
 
+func SealStatus(config *vault.Config) (*vault.SealStatusResponse, error) {
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	sys := client.Sys()
+	respones, err := sys.SealStatus()
+	if err != nil {
+		return nil, err
+	}
+	return respones, nil
+
+}
+
 func IsSealed(config *vault.Config) (bool, error) {
 	client, err := vault.NewClient(config)
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 func MountFolders(config []GocryptConfig) []*exec.Cmd {
 	var output []*exec.Cmd
 	for i, folderconfig := range config {
-		log.Println("Mounting: ", i, " with name: ", AbsolutePath(folderconfig.MountPoint))
+		log.Println("Mounting: ", i, " with name: ", AbsolutePath(folderconfig.MountPoint), " Duration", folderconfig.Duration.String(), " AllowOther", folderconfig.AllowOther)
 		cmd := MountGocryptfs(folderconfig.Path, folderconfig.MountPoint, folderconfig.Duration, folderconfig.Password, folderconfig.AllowOther)
 		empty, err := IsEmpty(folderconfig.MountPoint)
 		if err != nil {

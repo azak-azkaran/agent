@@ -28,7 +28,7 @@ func setupRestrouterTest(t *testing.T) {
 	require.NoError(t, err)
 
 	if AgentConfiguration.DB == nil {
-		AgentConfiguration.DB = InitDB("", true)
+		AgentConfiguration.DB = InitDB("", "", true)
 	}
 }
 
@@ -49,6 +49,9 @@ func TestRestCreateRestHandler(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	err := server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
 }
 
@@ -75,6 +78,9 @@ func TestRestRunRestServer(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
 }
 
@@ -140,6 +146,9 @@ func TestRestHandleSeal(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
 }
 
@@ -229,6 +238,9 @@ func TestRestPostBackup(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
+	err = AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
 	err = RemoveContents(BACKUP_TEST_FOLDER)
 	assert.NoError(t, err)
 	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
@@ -278,6 +290,9 @@ func TestRestPostMount(t *testing.T) {
 	time.Sleep(7 * time.Second)
 	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
 
+	err = AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
@@ -317,6 +332,9 @@ func TestRestStatus(t *testing.T) {
 	assert.NotEmpty(t, ConcurrentQueue)
 
 	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
 
 	err = RemoveContents(BACKUP_TEST_FOLDER)
@@ -361,6 +379,9 @@ func TestRestGetLog(t *testing.T) {
 	fmt.Println(bodyString)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
+	err = AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
@@ -402,6 +423,47 @@ func TestRestPostToken(t *testing.T) {
 	ok := CheckToken(AgentConfiguration.DB)
 	assert.True(t, ok)
 
+	err = AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
+}
+
+func TestRestPostUnsealKey(t *testing.T) {
+	fmt.Println("running: TestRestPostUnsealKey")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+
+	msg := VaultKeyMessage{
+		Key:   "test1",
+		Share: 1,
+	}
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	ok := CheckSealKey(AgentConfiguration.DB, 1)
+	assert.False(t, ok)
+
+	log.Println("Agent rest server startet on: ", server.Addr)
+
+	reqBody, err := json.Marshal(msg)
+	require.NoError(t, err)
+
+	fmt.Println("Sending Body:", string(reqBody))
+	resp, err := http.Post(REST_TEST_UNSEAL_KEY,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	ok = CheckSealKey(AgentConfiguration.DB, 1)
+	assert.True(t, ok)
+
+	err = AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
 }

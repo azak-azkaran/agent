@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -95,6 +97,9 @@ func TestMainGetConfigFromVault(t *testing.T) {
 	assert.Error(t, err)
 	assert.EqualError(t, err, ERROR_VAULT_NO_SECRET)
 	assert.Nil(t, config)
+
+	err = AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
@@ -185,7 +190,7 @@ func TestMainStart(t *testing.T) {
 	_, err = Unseal(testconfig.config, testconfig.secret)
 	require.NoError(t, err)
 
-	AgentConfiguration.DB = InitDB("", true)
+	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	go fun()
 
@@ -229,6 +234,9 @@ func TestMainStart(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 
+	AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
 	err = RemoveContents("./test/DB/")
 	assert.NoError(t, err)
 	assert.NoFileExists(t, "./test/DB/MANIFEST")
@@ -242,18 +250,33 @@ func TestMainMain(t *testing.T) {
 	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
-	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
-	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
-
-	_, err := Unseal(testconfig.config, testconfig.secret)
-	require.NoError(t, err)
+	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	multipleKey = true
+	sealStatus = true
+	Progress = 0
 
 	go main()
 	time.Sleep(1 * time.Second)
+	AgentConfiguration.VaultConfig = testconfig.config
 
 	resp, err := http.Get(REST_TEST_PING)
 	require.NoError(t, err)
 	defer resp.Body.Close()
+
+	for i := 1; i < 6; i++ {
+		msg := VaultKeyMessage{
+			Key:   "test" + strconv.Itoa(i),
+			Share: i,
+		}
+		reqBody, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		fmt.Println("Sending Body:", string(reqBody))
+		_, err = http.Post(REST_TEST_UNSEAL_KEY,
+			"application/json", bytes.NewBuffer(reqBody))
+		assert.NoError(t, err)
+	}
 
 	tokenMessage := TokenMessage{
 		Token: "randomtoken",
@@ -270,7 +293,17 @@ func TestMainMain(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "randomtoken", token)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
+	assert.Eventually(t, checkContents, 20*time.Second, 1*time.Second)
+
+	stopChan <- syscall.SIGINT
+	time.Sleep(5 * time.Second)
+
+	is, err := IsEmpty("./test/tmp-mount")
+	assert.NoError(t, err)
+	assert.True(t, is)
+
+	assert.False(t, sealStatus)
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
@@ -278,12 +311,30 @@ func TestMainMain(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 
-	is, err := IsEmpty("./test/tmp-mount")
-	assert.NoError(t, err)
-	assert.True(t, is)
-
 	err = RemoveContents("./test/DB/")
 	assert.NoError(t, err)
 	assert.NoFileExists(t, "./test/DB/MANIFEST")
 	time.Sleep(1 * time.Millisecond)
+	multipleKey = false
+}
+
+func checkContents() bool {
+	ok, err := IsEmpty("./test/tmp-mount")
+	if err != nil {
+		return false
+	}
+
+	if ok {
+		return false
+	}
+
+	ok, err = IsEmpty(BACKUP_TEST_FOLDER)
+	if err != nil {
+		return false
+	}
+	if ok {
+		return false
+	}
+
+	return true
 }

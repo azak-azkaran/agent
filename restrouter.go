@@ -17,6 +17,11 @@ type TokenMessage struct {
 	Token string `json:"token" binding:"required"`
 }
 
+type VaultKeyMessage struct {
+	Key   string `json:"key" binding:"required"`
+	Share int    `json:"share" binding:"required"`
+}
+
 type BackupMessage struct {
 	Mode  string `json:"mode" binding:"required"`
 	Token string `json:"token" binding:"required"`
@@ -196,17 +201,20 @@ func postMount(c *gin.Context) {
 		return
 	}
 
+	var dur time.Duration
 	if msg.Duration != "" {
-		dur, err := time.ParseDuration(msg.Duration)
+		dur, err = time.ParseDuration(msg.Duration)
 		if err != nil {
 			log.Println("ERROR: Failed to parse duration", err)
 		} else {
-			for i, v := range config.Gocrypt {
-				v.Duration = dur
-				v.AllowOther = msg.AllowOther
-				config.Gocrypt[i] = v
-			}
+			dur = 5 * time.Second
 		}
+	}
+
+	for i, v := range config.Gocrypt {
+		v.Duration = dur
+		v.AllowOther = msg.AllowOther
+		config.Gocrypt[i] = v
 	}
 
 	out := MountFolders(config.Gocrypt)
@@ -320,6 +328,27 @@ func getToken(c *gin.Context) {
 	})
 }
 
+func postUnsealKey(c *gin.Context) {
+	var msg VaultKeyMessage
+	if err := c.BindJSON(&msg); err != nil {
+		log.Println(msg)
+		returnErr(err, ERROR_BINDING, c)
+		return
+	}
+
+	ok, err := PutSealKey(AgentConfiguration.DB, msg.Key, msg.Share)
+
+	if err != nil {
+		returnErr(err, ERROR_PUT_SEAL_KEY, c)
+		return
+	}
+	if ok {
+		c.JSON(http.StatusOK, gin.H{})
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{})
+	}
+}
+
 func RunRestServer(address string) (*http.Server, func()) {
 	server := &http.Server{
 		Addr:    address,
@@ -344,6 +373,7 @@ func CreateRestHandler() http.Handler {
 		})
 	})
 
+	r.POST("/unsealkey", postUnsealKey)
 	r.POST("/token", postToken)
 	r.POST("/unseal", postUnseal)
 	r.POST("/seal", postSeal)

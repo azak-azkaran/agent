@@ -16,7 +16,9 @@ import (
 var server *http.Server
 var running bool = false
 var sealStatus bool = false
+var multipleKey bool = false
 
+var Progress = 0
 var Hostname string
 
 func StartServer(t *testing.T, address string) {
@@ -53,19 +55,8 @@ func StopServer() {
 
 func createHandler() http.Handler {
 	r := gin.Default()
-	r.GET("/v1/sys/seal-status", func(c *gin.Context) {
-		log.Println("MOCK-Server: called seal-status")
-		var msg vault.SealStatusResponse
-		msg.Sealed = sealStatus
-		c.JSON(http.StatusOK, msg)
-	})
-	r.PUT("/v1/sys/unseal", func(c *gin.Context) {
-		log.Println("MOCK-Server: called unseal")
-		var msg vault.SealStatusResponse
-		sealStatus = false
-		msg.Sealed = sealStatus
-		c.JSON(http.StatusOK, msg)
-	})
+	r.GET("/v1/sys/seal-status", test_seal_status)
+	r.PUT("/v1/sys/unseal", test_unseal)
 	r.PUT("/v1/sys/seal", func(c *gin.Context) {
 		log.Println("MOCK-Server: called seal")
 		sealStatus = true
@@ -92,19 +83,19 @@ func createHandler() http.Handler {
 		name := c.Param("name")
 
 		if name == Hostname || name == "configpath" {
-			config(c)
+			test_config(c)
 			return
 		}
 		log.Println("MOCK-Server: invalid config")
 		var arr []string
 		c.JSON(404, gin.H{"error": arr})
 	})
-	r.GET("/v1/gocrypt/data/random-config-path", gocrypt)
-	r.GET("/v1/gocrypt/data/gocryptpath", gocrypt)
+	r.GET("/v1/gocrypt/data/random-config-path", test_gocrypt)
+	r.GET("/v1/gocrypt/data/gocryptpath", test_gocrypt)
 	return r
 }
 
-func gocrypt(c *gin.Context) {
+func test_gocrypt(c *gin.Context) {
 	log.Println("MOCK-Server: called gocrypt")
 	var msg vault.Secret
 	data := make(map[string]interface{})
@@ -119,7 +110,7 @@ func gocrypt(c *gin.Context) {
 	c.JSON(http.StatusOK, msg)
 }
 
-func config(c *gin.Context) {
+func test_config(c *gin.Context) {
 	log.Println("MOCK-Server: called config")
 	var msg vault.Secret
 	data := make(map[string]interface{})
@@ -127,5 +118,45 @@ func config(c *gin.Context) {
 	data["restic"] = "resticpath"
 	data["gocryptfs"] = VAULT_TEST_CONFIGPATH
 	msg.Data = data
+	c.JSON(http.StatusOK, msg)
+}
+
+func test_seal_status(c *gin.Context) {
+	log.Println("MOCK-Server: called seal-status")
+	var msg vault.SealStatusResponse
+	if multipleKey {
+		msg.T = 3
+		msg.N = 5
+		msg.Progress = Progress
+	}
+
+	if msg.Progress >= msg.T {
+		msg.Progress = 0
+	}
+	msg.Sealed = sealStatus
+	c.JSON(http.StatusOK, msg)
+
+}
+
+func test_unseal(c *gin.Context) {
+	log.Println("MOCK-Server: called unseal")
+	var msg vault.SealStatusResponse
+
+	if multipleKey {
+		Progress = Progress + 1
+		msg.T = 3
+		msg.N = 5
+		msg.Progress = Progress
+		sealStatus = msg.Progress <= msg.T-1
+	} else {
+		sealStatus = false
+	}
+
+	if Progress >= msg.T {
+		msg.Progress = 0
+		Progress = 0
+	}
+	msg.Sealed = sealStatus
+
 	c.JSON(http.StatusOK, msg)
 }

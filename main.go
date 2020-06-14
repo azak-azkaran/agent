@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"time"
 
 	cqueue "github.com/enriquebris/goconcurrentqueue"
@@ -24,6 +26,8 @@ import (
 var AgentConfiguration Configuration
 var ConcurrentQueue *cqueue.FIFO
 var jobmap cmap.ConcurrentMap
+var stopChan = make(chan os.Signal, 2)
+var restServerAgent *http.Server
 
 type Configuration struct {
 	Agent            *AgentConfig
@@ -217,6 +221,8 @@ func parseConfiguration(confi *Configuration) {
 		"\nPath to DB:", confi.PathDB,
 		"\nTime Between Backup Runs: ", confi.TimeBetweenStart,
 		"\nVaultAddress: ", confi.VaultConfig.Address,
+		"\nMount Duration: ", confi.MountDuration,
+		"\nMount AllowOther: ", confi.MountAllow,
 	)
 }
 
@@ -344,6 +350,7 @@ func Start(Duration string, AllowOther bool) {
 		log.Println("Error while mounting: ", bodyString)
 	}
 
+	checkBackupRepository(token)
 	backupMsg := BackupMessage{
 		Mode:  "backup",
 		Token: token,
@@ -374,26 +381,107 @@ func Start(Duration string, AllowOther bool) {
 	} else {
 		UpdateTimestamp(AgentConfiguration.DB, time.Now())
 	}
+}
+
+func checkBackupRepository(token string) {
+	backupMsg := BackupMessage{
+		Mode:  "exist",
+		Token: token,
+		Run:   true,
+	}
+
+	reqBody, err := json.Marshal(backupMsg)
+	if err != nil {
+		log.Println(ERROR_UNMARSHAL, err)
+		return
+	}
+
+	resp, err := http.Post("http://"+AgentConfiguration.Address+"/backup",
+		"application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Println(ERROR_SENDING_REQUEST, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println(MAIN_MESSAGE_BACKUP_UNAVAILABLE)
+		backupMsg.Mode = "init"
+		reqBody, err := json.Marshal(backupMsg)
+		if err != nil {
+			log.Println(ERROR_UNMARSHAL, err)
+			return
+		}
+		_, err = http.Post("http://"+AgentConfiguration.Address+"/backup",
+			"application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			log.Println(ERROR_SENDING_REQUEST, err)
+			return
+		}
+	}
 
 }
 
+func unsealVault(seal *vault.SealStatusResponse) {
+	if CheckSealKey(AgentConfiguration.DB, seal.N) {
+		log.Println(MAIN_MESSAGE_START_UNSEAL)
+		values := GetSealKey(AgentConfiguration.DB, seal.T, seal.N)
+		for _, v := range values {
+			_, err := Unseal(AgentConfiguration.VaultConfig, v)
+			if err != nil {
+				log.Println(MAIN_ERROR_UNSEAL, err)
+			}
+		}
+	} else {
+		log.Println(MAIN_MESSAGE_NOT_ENOUGH_KEYS)
+
+	}
+}
+
 func run() {
+	seal, err := SealStatus(AgentConfiguration.VaultConfig)
+	if err != nil {
+		log.Println(MAIN_ERROR_CHECK_SEAL, err)
+	}
+
+	if seal.Sealed {
+		log.Println(ERROR_VAULT_SEALED)
+		unsealVault(seal)
+	}
+
 	Start(AgentConfiguration.MountDuration, AgentConfiguration.MountAllow)
 	AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
 }
 
 func main() {
+	stopChan = make(chan os.Signal, 2)
+	signal.Notify(stopChan, os.Interrupt)
+	go func() {
+		<-stopChan
+		log.Println("Stopping Agent Happly")
+		if AgentConfiguration.Timer != nil {
+			AgentConfiguration.Timer.Stop()
+		}
+
+		if AgentConfiguration.DB != nil {
+			AgentConfiguration.DB.Close()
+		}
+
+		restServerAgent.Shutdown(context.Background())
+	}()
 	err := Init(vault.DefaultConfig(), os.Args)
 	//log.Print("Please enter Token: ")
 	//password, err := terminal.ReadPassword(int(syscall.Stdin))
 	HandleError(err)
-	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, false)
-	_, fun := RunRestServer(AgentConfiguration.Address)
+	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, "", false)
+	var fun func()
+	restServerAgent, fun = RunRestServer(AgentConfiguration.Address)
 
 	go func() {
 		log.Println("Starting Run Function in 5 Seconds")
-		time.AfterFunc(5*time.Second, run)
+		AgentConfiguration.Timer = time.AfterFunc(5*time.Second, run)
 	}()
+
 	log.Println("Starting the Rest Server")
 	fun()
 }

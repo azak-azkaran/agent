@@ -14,7 +14,7 @@ import (
 func TestStoreInitDB(t *testing.T) {
 	fmt.Println("running: TestStoreInitDB")
 
-	db := InitDB("", true)
+	db := InitDB("./test/DB", "", false)
 	require.NotNil(t, db)
 
 	err := db.Update(func(txn *badger.Txn) error {
@@ -41,12 +41,21 @@ func TestStoreInitDB(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 42, test)
 
+	err = db.Close()
+	assert.NoError(t, err)
+
+	fmt.Println("Testing with Masterkey")
+	db = InitDB("./test/DB", "test", false)
+	require.NotNil(t, db)
+
+	err = db.Close()
+	assert.NoError(t, err)
 }
 
 func TestStoreIntegration(t *testing.T) {
 	fmt.Println("running: TestStoreIntegration")
 
-	db := InitDB("", true)
+	db := InitDB("./test/DB", "", false)
 	require.NotNil(t, db)
 
 	ok, err := Put(db, "answer", "42")
@@ -65,14 +74,29 @@ func TestStoreIntegration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "theAnswer", value)
 
+	err = db.Close()
+	assert.NoError(t, err)
+
+	fmt.Println("Testing with Masterkey")
+	db = InitDB("./test/DB", "test", false)
+	require.NotNil(t, db)
+
+	ok, err = Put(db, "answer", "Blub")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	err = db.Close()
+	assert.NoError(t, err)
+
 	err = RemoveContents("./test/DB/")
 	assert.NoError(t, err)
 	assert.NoFileExists(t, "./test/DB/MANIFEST")
+
 }
 
 func TestStorePut(t *testing.T) {
 	fmt.Println("running: TestStorePut")
-	db := InitDB("", true)
+	db := InitDB("", "", true)
 	require.NotNil(t, db)
 
 	ok, err := Put(db, "answer", "42")
@@ -96,11 +120,13 @@ func TestStorePut(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 42, test)
 
+	err = db.Close()
+	assert.NoError(t, err)
 }
 
 func TestStoreGet(t *testing.T) {
 	fmt.Println("running: TestStoreGet")
-	db := InitDB("", true)
+	db := InitDB("", "", true)
 	require.NotNil(t, db)
 
 	err := db.Update(func(txn *badger.Txn) error {
@@ -116,11 +142,14 @@ func TestStoreGet(t *testing.T) {
 	test, err := strconv.Atoi(string(val))
 	require.NoError(t, err)
 	assert.Equal(t, 42, test)
+
+	err = db.Close()
+	assert.NoError(t, err)
 }
 
 func TestStoreUpdateTimestamp(t *testing.T) {
 	fmt.Println("running: TestStoreUpdateTimestamp")
-	db := InitDB("", true)
+	db := InitDB("", "", true)
 	require.NotNil(t, db)
 
 	value, err := GetTimestamp(db)
@@ -137,11 +166,14 @@ func TestStoreUpdateTimestamp(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, timestamp.Unix(), value.Unix())
 	assert.Equal(t, timestamp.Format(time.RFC3339Nano), value.Format(time.RFC3339Nano))
+
+	err = db.Close()
+	assert.NoError(t, err)
 }
 
 func TestStoreCheckToken(t *testing.T) {
 	fmt.Println("running: TestStoreCheckToken")
-	db := InitDB("", true)
+	db := InitDB("", "", true)
 	require.NotNil(t, db)
 
 	ok := CheckToken(db)
@@ -157,5 +189,53 @@ func TestStoreCheckToken(t *testing.T) {
 
 	ok = CheckToken(db)
 	assert.True(t, ok)
+
+	err = db.Close()
+	assert.NoError(t, err)
+}
+
+func TestStoreCheckSealKey(t *testing.T) {
+	fmt.Println("running: TestStoreGetSealKey")
+	db := InitDB("", "", true)
+	require.NotNil(t, db)
+
+	ok := CheckSealKey(db, 1)
+	assert.False(t, ok)
+
+	key := "test"
+	for i := 1; i < 6; i++ {
+		ok, err := PutSealKey(db, key, i)
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	}
+	ok = CheckSealKey(db, 1)
+	assert.True(t, ok)
+
+	ok = CheckSealKey(db, 5)
+	assert.True(t, ok)
+
+	ok = CheckSealKey(db, 6)
+	assert.False(t, ok)
+
+	err := db.Close()
+	assert.NoError(t, err)
+}
+
+func TestStoreGetSealKey(t *testing.T) {
+	fmt.Println("running: TestStoreGetSealKey")
+	db := InitDB("", "", true)
+	require.NotNil(t, db)
+
+	key := "test"
+	for i := 1; i < 6; i++ {
+		ok, err := PutSealKey(db, key, i)
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	}
+	values := GetSealKey(db, 3, 5)
+	assert.Len(t, values, 3)
+
+	err := db.Close()
+	assert.NoError(t, err)
 
 }

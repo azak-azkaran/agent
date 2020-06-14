@@ -148,3 +148,45 @@ func TestVaultCheckMap(t *testing.T) {
 	err = CheckMap(list, data)
 	assert.Error(t, err)
 }
+
+func TestVaultSealStatus(t *testing.T) {
+	fmt.Println("running: TestVaultSealStatus")
+	testconfig := readConfig(t)
+	multipleKey = true
+	err := Seal(testconfig.config, VAULT_TEST_TOKEN)
+	require.NoError(t, err)
+
+	//testconfig.config.Address = "http://127.0.0.1:8200"
+
+	seal, err := SealStatus(testconfig.config)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 5, seal.N)
+	assert.Equal(t, 3, seal.T)
+	assert.Equal(t, 0, seal.Progress)
+
+	assert.True(t, seal.Sealed)
+
+	seal, err = Unseal(testconfig.config, VAULT_TEST_TOKEN)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, seal.Progress)
+
+	seal, err = SealStatus(testconfig.config)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, seal.Progress)
+
+	seal, err = Unseal(testconfig.config, VAULT_TEST_TOKEN)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, seal.Progress)
+
+	seal, err = Unseal(testconfig.config, VAULT_TEST_TOKEN)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, seal.Progress)
+	assert.False(t, seal.Sealed)
+
+	seal, err = SealStatus(testconfig.config)
+	assert.NoError(t, err)
+	assert.False(t, seal.Sealed)
+
+	multipleKey = false
+}
