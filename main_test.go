@@ -116,8 +116,8 @@ func TestMainInit(t *testing.T) {
 	args = append(args, "--address="+MAIN_TEST_ADDRESS)
 	args = append(args, "--pathdb="+MAIN_TEST_PATHDB)
 	args = append(args, "--duration="+MAIN_TEST_DURATION)
-	args = append(args, "--mount-duration="+MAIN_TEST_MOUNT_DURATION)
-	args = append(args, "--mount-allow="+MAIN_TEST_MOUNT_ALLOW)
+	args = append(args, "--mount_duration="+MAIN_TEST_MOUNT_DURATION)
+	args = append(args, "--mount_allow="+MAIN_TEST_MOUNT_ALLOW)
 
 	err = Init(testconfig.config, args)
 	require.NoError(t, err)
