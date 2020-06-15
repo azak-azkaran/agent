@@ -297,7 +297,7 @@ func TestMainMain(t *testing.T) {
 	assert.Eventually(t, checkContents, 20*time.Second, 1*time.Second)
 
 	stopChan <- syscall.SIGINT
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	is, err := IsEmpty("./test/tmp-mount")
 	assert.NoError(t, err)
