@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -43,12 +44,14 @@ type Configuration struct {
 	Timer            *time.Timer
 	MountAllow       bool
 	MountDuration    string
+	VaultKeyFile     string
 }
 
 type Job struct {
-	Cmd    *exec.Cmd
-	Stdout *bytes.Buffer
-	Stderr *bytes.Buffer
+	Cmd         *exec.Cmd
+	Stdout      *bytes.Buffer
+	Stderr      *bytes.Buffer
+	printOutput bool
 }
 
 func HandleError(err error) bool {
@@ -63,8 +66,10 @@ func HandleError(err error) bool {
 	return true
 }
 
-func Log(toQueue string) {
-	log.Println("INFO: " + toQueue)
+func Log(toQueue string, p bool) {
+	if p {
+		log.Println("INFO: " + toQueue)
+	}
 	err := ConcurrentQueue.Enqueue(toQueue)
 	if err != nil {
 		log.Println("ERROR: Failed to enqueue, ", err)
@@ -82,15 +87,15 @@ func QueueJobStatus(job Job) {
 	}
 
 	if job.Stdout.Len() > 0 {
-		Log(job.Stdout.String())
+		Log(job.Stdout.String(), job.printOutput)
 	} else {
-		Log("No Output in stdout")
+		Log("No Output in stdout", job.printOutput)
 	}
 
 	if job.Stderr.Len() > 0 {
-		Log(job.Stderr.String())
+		Log(job.Stderr.String(), job.printOutput)
 	} else {
-		Log("No Output in stderr")
+		Log("No Output in stderr", job.printOutput)
 	}
 
 }
@@ -121,8 +126,9 @@ func AddJob(cmd *exec.Cmd, name string) Job {
 	return job
 }
 
-func RunJob(cmd *exec.Cmd, name string) error {
+func RunJob(cmd *exec.Cmd, name string, printOutput bool) error {
 	job := AddJob(cmd, name)
+	job.printOutput = printOutput
 	log.Println("Starting job: ", name)
 	return doJob(job)
 }
@@ -133,18 +139,20 @@ func doJob(job Job) error {
 	return err
 }
 
-func RunJobBackground(cmd *exec.Cmd, name string) error {
+func RunJobBackground(cmd *exec.Cmd, name string, printOutput bool) error {
 	go func() {
 		log.Println("Starting job in background: ", name)
 		job := AddJob(cmd, name)
+		job.printOutput = printOutput
 		err := doJob(job)
 		HandleError(err)
 	}()
 	return nil
 }
 
-func DontRun(cmd *exec.Cmd, name string) error {
+func DontRun(cmd *exec.Cmd, name string, printOutput bool) error {
 	job := AddJob(cmd, name)
+	job.printOutput = printOutput
 	log.Println("Not Runing: ", job)
 	QueueJobStatus(job)
 	return nil
@@ -172,6 +180,11 @@ func bindEnviorment() error {
 		return err
 	}
 	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_VAULT_KEY_FILE)
 	if err != nil {
 		return err
 	}
@@ -215,12 +228,19 @@ func parseConfiguration(confi *Configuration) {
 		confi.MountAllow = false
 	}
 
+	if viper.IsSet(MAIN_VAULT_KEY_FILE) {
+		confi.VaultKeyFile = viper.GetString(MAIN_VAULT_KEY_FILE)
+	} else {
+		confi.VaultKeyFile = ""
+	}
+
 	log.Println("Agent initalzing on: ", confi.Hostname)
 	log.Println("Agent Configuration:",
 		"\nAddress: ", confi.Address,
 		"\nPath to DB:", confi.PathDB,
 		"\nTime Between Backup Runs: ", confi.TimeBetweenStart,
 		"\nVaultAddress: ", confi.VaultConfig.Address,
+		"\nVault KeyFile path: ", confi.VaultKeyFile,
 		"\nMount Duration: ", confi.MountDuration,
 		"\nMount AllowOther: ", confi.MountAllow,
 	)
@@ -235,6 +255,7 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend.String(MAIN_TIME_DURATION, "30m", "The duration between backups")
 	addressCommend.String(MAIN_MOUNT_DURATION, "", "The Duration how long the gocrypt should be mounted")
 	addressCommend.String(MAIN_MOUNT_ALLOW, "true", "If the gocrypt mount should be allowed by other users")
+	addressCommend.String(MAIN_VAULT_KEY_FILE, "", "File in which the vault keys are stored for easy save into Badger database")
 
 	err := bindEnviorment()
 	if err != nil {
@@ -264,6 +285,40 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	parseConfiguration(&config)
 	AgentConfiguration = config
 	return nil
+}
+
+func CheckKeyFile(path string) error {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if stat.IsDir() {
+		return errors.New(MAIN_ERROR_IS_DIR)
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	reader := bufio.NewScanner(f)
+
+	var keys []string
+	for reader.Scan() {
+		keys = append(keys, reader.Text())
+	}
+
+	for k, v := range keys {
+		_, err = PutSealKey(AgentConfiguration.DB, v, k+1)
+		if err != nil {
+			DropSealKeys(AgentConfiguration.DB)
+			return err
+		}
+	}
+	return nil
+	//return errors.New("Not implemented yet")
 }
 
 func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config) (*Configuration, error) {
@@ -324,6 +379,7 @@ func Start(Duration string, AllowOther bool) {
 		Token:      token,
 		Duration:   Duration,
 		AllowOther: AllowOther,
+		Run:        true,
 	}
 
 	reqBody, err := json.Marshal(mountMsg)
@@ -352,8 +408,9 @@ func Start(Duration string, AllowOther bool) {
 
 	checkBackupRepository(token)
 	backupMsg := BackupMessage{
-		Mode:  "backup",
-		Token: token,
+		Mode:        "backup",
+		Token:       token,
+		PrintOutput: true,
 	}
 
 	reqBody, err = json.Marshal(backupMsg)
@@ -385,9 +442,10 @@ func Start(Duration string, AllowOther bool) {
 
 func checkBackupRepository(token string) {
 	backupMsg := BackupMessage{
-		Mode:  "exist",
-		Token: token,
-		Run:   true,
+		Mode:        "exist",
+		Token:       token,
+		Run:         true,
+		PrintOutput: false,
 	}
 
 	reqBody, err := json.Marshal(backupMsg)
@@ -473,10 +531,16 @@ func main() {
 		}
 	}()
 	err := Init(vault.DefaultConfig(), os.Args)
+
 	//log.Print("Please enter Token: ")
 	//password, err := terminal.ReadPassword(int(syscall.Stdin))
 	HandleError(err)
 	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, "", false)
+
+	if AgentConfiguration.VaultKeyFile != "" {
+		err = CheckKeyFile(AgentConfiguration.VaultKeyFile)
+		HandleError(err)
+	}
 	var fun func()
 	restServerAgent, fun = RunRestServer(AgentConfiguration.Address)
 

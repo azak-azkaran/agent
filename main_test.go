@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -32,7 +33,7 @@ func TestMainRunJobBackground(t *testing.T) {
 	fmt.Println("running: TestMainRunJobBackground")
 	cmd := exec.Command("echo", "hallo")
 
-	err := RunJobBackground(cmd, "test")
+	err := RunJobBackground(cmd, "test", false)
 	assert.NoError(t, err)
 
 	assert.Eventually(t, func() bool {
@@ -54,7 +55,7 @@ func TestMainRunJob(t *testing.T) {
 	fmt.Println("running: TestMainRunJob")
 	cmd := exec.Command("echo", "hallo")
 
-	err := RunJob(cmd, "test")
+	err := RunJob(cmd, "test", false)
 	assert.NoError(t, err)
 
 	v, ok := jobmap.Get("test")
@@ -66,7 +67,7 @@ func TestMainRunJob(t *testing.T) {
 	cmd = exec.Command("printenv")
 	cmd.Env = []string{"TEST=hallo"}
 
-	err = RunJob(cmd, "test")
+	err = RunJob(cmd, "test", true)
 	assert.NoError(t, err)
 
 	v, ok = jobmap.Get("test")
@@ -74,7 +75,6 @@ func TestMainRunJob(t *testing.T) {
 	job = v.(Job)
 	assert.Equal(t, "TEST=hallo\n", job.Stdout.String())
 	assert.Equal(t, "", job.Stderr.String())
-
 }
 
 func TestMainGetConfigFromVault(t *testing.T) {
@@ -159,7 +159,7 @@ func TestMainQueueJobStatus(t *testing.T) {
 
 	cmd := exec.Command("echo", "hallo")
 
-	err := RunJob(cmd, "test1")
+	err := RunJob(cmd, "test1", true)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
@@ -206,7 +206,7 @@ func TestMainStart(t *testing.T) {
 
 	fmt.Println("Sending Body:", string(reqBody))
 	resp, err := http.Post(REST_TEST_TOKEN,
-		"application/json", bytes.NewBuffer(reqBody))
+		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -274,7 +274,7 @@ func TestMainMain(t *testing.T) {
 
 		fmt.Println("Sending Body:", string(reqBody))
 		_, err = http.Post(REST_TEST_UNSEAL_KEY,
-			"application/json", bytes.NewBuffer(reqBody))
+			MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 		assert.NoError(t, err)
 	}
 
@@ -286,7 +286,7 @@ func TestMainMain(t *testing.T) {
 
 	fmt.Println("Sending Body:", string(reqBody))
 	_, err = http.Post(REST_TEST_TOKEN,
-		"application/json", bytes.NewBuffer(reqBody))
+		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 	assert.NoError(t, err)
 
 	token, err := GetToken(AgentConfiguration.DB)
@@ -316,6 +316,38 @@ func TestMainMain(t *testing.T) {
 	assert.NoFileExists(t, "./test/DB/MANIFEST")
 	time.Sleep(1 * time.Millisecond)
 	multipleKey = false
+}
+
+func TestMainCheckKeyFile(t *testing.T) {
+	fmt.Println("Running: TestMainCheckKeyFile")
+	t.Cleanup(func() {
+		os.Remove(MAIN_TEST_KEYFILE_PATH)
+	})
+	AgentConfiguration.DB = InitDB("", "", true)
+	require.NotNil(t, AgentConfiguration.DB)
+
+	require.NoFileExists(t, MAIN_TEST_KEYFILE_PATH)
+	err := CheckKeyFile(MAIN_TEST_KEYFILE_PATH)
+	assert.Error(t, err)
+
+	f, err := os.Create(MAIN_TEST_KEYFILE_PATH)
+	require.NoError(t, err)
+	w := bufio.NewWriter(f)
+
+	key := "test"
+	for i := 1; i < 6; i++ {
+		_, err := w.WriteString(key + strconv.Itoa(i) + "\n")
+		assert.NoError(t, err)
+	}
+	err = w.Flush()
+	assert.NoError(t, err)
+	require.FileExists(t, MAIN_TEST_KEYFILE_PATH)
+
+	err = CheckKeyFile(MAIN_TEST_KEYFILE_PATH)
+	assert.NoError(t, err)
+
+	ok := CheckSealKey(AgentConfiguration.DB, 5)
+	assert.True(t, ok)
 }
 
 func checkContents() bool {

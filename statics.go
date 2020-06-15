@@ -12,23 +12,29 @@ const (
 	STORE_TIMESTAMP = "timestamp"
 	STORE_KEY       = "vault-key-"
 
-	MAIN_PATHDB                     = "pathdb"
-	MAIN_ADDRESS                    = "address"
-	MAIN_TIME_DURATION              = "duration"
-	MAIN_MOUNT_DURATION             = "mount_duration"
-	MAIN_MOUNT_ALLOW                = "mount_allow"
+	STORE_ERROR_NOT_DROPED = "Error keys were not dropped."
+
+	MAIN_PATHDB         = "pathdb"
+	MAIN_ADDRESS        = "address"
+	MAIN_TIME_DURATION  = "duration"
+	MAIN_MOUNT_DURATION = "mount_duration"
+	MAIN_MOUNT_ALLOW    = "mount_allow"
+	MAIN_VAULT_KEY_FILE = "vault_key_file"
+
 	MAIN_MESSAGE_NOT_ENOUGH_KEYS    = "Not enough vault keys in storage"
 	MAIN_MESSAGE_START_UNSEAL       = "Starting to unseal Vault"
 	MAIN_MESSAGE_BACKUP_UNAVAILABLE = "Backup Repository is unavailable"
 	MAIN_MESSAGE_START_RESTSERVER   = "Starting the REST Server"
 	MAIN_MESSAGE_START_RUNNING      = "Starting the Agent RUN - Function in 5 Seconds"
-	MAIN_POST_HTTP                  = "http://"
-	MAIN_POST_ENDPOINT              = "/backup"
-	MAIN_POST_DATA_TYPE             = "application/json"
+
+	MAIN_POST_HTTP      = "http://"
+	MAIN_POST_ENDPOINT  = "/backup"
+	MAIN_POST_DATA_TYPE = "application/json"
 
 	MAIN_ERROR_CHECK_SEAL = "Error while checking seal: "
 	MAIN_ERROR_UNSEAL     = "Error while unsealing vault: "
 	MAIN_ERROR_SHUTDOWN   = "Error shutting down: "
+	MAIN_ERROR_IS_DIR     = "Error provided path is a directory"
 
 	ERROR_DATABASE_NOT_FOUND = "Database is not initialized"
 	ERROR_KEY_NOT_FOUND      = "Key is not found: "
@@ -81,6 +87,7 @@ const (
 	MAIN_TEST_DURATION       = "1h30m"
 	MAIN_TEST_MOUNT_DURATION = "5s"
 	MAIN_TEST_MOUNT_ALLOW    = "false"
+	MAIN_TEST_KEYFILE_PATH   = "./test/keyfile"
 
 	REST_TEST_TOKEN      = "http://localhost:8031/token"
 	REST_TEST_LOG        = "http://localhost:8031/logs"

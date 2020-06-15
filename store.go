@@ -137,6 +137,22 @@ func CheckSealKey(db *badger.DB, shares int) bool {
 
 }
 
+func DropSealKeys(db *badger.DB) error {
+	if db == nil {
+		return errors.New(ERROR_DATABASE_NOT_FOUND)
+	}
+	err := db.DropPrefix([]byte(STORE_KEY))
+	if err != nil {
+		return err
+	}
+
+	ok := CheckSealKey(db, 1)
+	if ok {
+		return errors.New(STORE_ERROR_NOT_DROPED)
+	}
+	return nil
+}
+
 func PutSealKey(db *badger.DB, key string, shares int) (bool, error) {
 	log.Println("Adding seal key, ", shares)
 	return Put(db, STORE_KEY+strconv.Itoa(shares), key)

@@ -239,3 +239,26 @@ func TestStoreGetSealKey(t *testing.T) {
 	assert.NoError(t, err)
 
 }
+
+func TestStoreDropSealKeys(t *testing.T) {
+	fmt.Println("running: TestStoreDropSealKeys")
+	db := InitDB("", "", true)
+	require.NotNil(t, db)
+
+	ok, err := PutSealKey(db, "test", 1)
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	keys := GetSealKey(db, 1, 1)
+	assert.NotNil(t, keys)
+	assert.Len(t, keys, 1)
+
+	err = DropSealKeys(db)
+	assert.NoError(t, err)
+
+	key, err := Get(db, STORE_KEY+"1")
+	assert.Error(t, err)
+	assert.Equal(t, "", key)
+	keys = GetSealKey(db, 1, 1)
+	assert.Len(t, keys, 0)
+}

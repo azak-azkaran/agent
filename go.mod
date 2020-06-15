@@ -16,10 +16,11 @@ require (
 	github.com/golang/protobuf v1.4.1
 	github.com/golangci/golangci-lint v1.26.0 // indirect
 	github.com/gopasspw/gopass v1.9.0 // indirect
+	github.com/hashicorp/consul-template v0.25.0
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.6 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
-	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/api v1.0.5-0.20190730042357-746c0b111519
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

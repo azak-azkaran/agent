@@ -23,24 +23,26 @@ type VaultKeyMessage struct {
 }
 
 type BackupMessage struct {
-	Mode  string `json:"mode" binding:"required"`
-	Token string `json:"token" binding:"required"`
-	Run   bool   `json:"run"`
-	Test  bool   `json:"test"`
-	Debug bool   `json:"debug"`
+	Mode        string `json:"mode" binding:"required"`
+	Token       string `json:"token" binding:"required"`
+	Run         bool   `json:"run"`
+	Test        bool   `json:"test"`
+	Debug       bool   `json:"debug"`
+	PrintOutput bool   `json:"print"`
 }
 
 type MountMessage struct {
-	Token      string `json:"token" binding:"required"`
-	Run        bool   `json:"run"`
-	Test       bool   `json:"test"`
-	Debug      bool   `json:"debug"`
-	Duration   string `json:"duration"`
-	AllowOther bool   `json:"allowOther"`
+	Token       string `json:"token" binding:"required"`
+	Run         bool   `json:"run"`
+	Test        bool   `json:"test"`
+	Debug       bool   `json:"debug"`
+	Duration    string `json:"duration"`
+	AllowOther  bool   `json:"allowOther"`
+	PrintOutput bool   `json:"print"`
 }
 
-func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) error, c *gin.Context) {
-	if err := function(cmd, mode); err != nil {
+func HandleBackup(cmd *exec.Cmd, mode string, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context) {
+	if err := function(cmd, mode, printOutput); err != nil {
 		log.Println(ERROR_PREFIX + err.Error())
 		enqueue(err.Error())
 		returnErr(err, ERROR_RUNBACKUP, c)
@@ -49,10 +51,10 @@ func HandleBackup(cmd *exec.Cmd, mode string, function func(*exec.Cmd, string) e
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-func HandleMountFolders(cmds []*exec.Cmd, function func(*exec.Cmd, string) error, c *gin.Context, buffer bytes.Buffer) {
+func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context, buffer bytes.Buffer) {
 	ok := true
 	for k, v := range cmds {
-		if err := function(v, "mount"+strconv.Itoa(k)); err != nil {
+		if err := function(v, "mount"+strconv.Itoa(k), printOutput); err != nil {
 			m := ERROR_PREFIX + ERROR_RUNMOUNT + err.Error()
 			enqueue(err.Error())
 			log.Println(m)
@@ -229,15 +231,15 @@ func postMount(c *gin.Context) {
 
 	if msg.Test {
 		log.Println("Test Mode")
-		HandleMountFolders(out, DontRun, c, buffer)
+		HandleMountFolders(out, true, DontRun, c, buffer)
 		return
 	}
 
 	if msg.Run {
-		HandleMountFolders(out, RunJob, c, buffer)
+		HandleMountFolders(out, msg.PrintOutput, RunJob, c, buffer)
 		return
 	} else {
-		HandleMountFolders(out, RunJobBackground, c, buffer)
+		HandleMountFolders(out, msg.PrintOutput, RunJobBackground, c, buffer)
 		return
 	}
 }
@@ -281,15 +283,15 @@ func postBackup(c *gin.Context) {
 	}
 
 	if msg.Test {
-		HandleBackup(cmd, msg.Mode, DontRun, c)
+		HandleBackup(cmd, msg.Mode, true, DontRun, c)
 		return
 	}
 
 	if msg.Run {
-		HandleBackup(cmd, msg.Mode, RunJob, c)
+		HandleBackup(cmd, msg.Mode, msg.PrintOutput, RunJob, c)
 		return
 	} else {
-		HandleBackup(cmd, msg.Mode, RunJobBackground, c)
+		HandleBackup(cmd, msg.Mode, msg.PrintOutput, RunJobBackground, c)
 		return
 	}
 }

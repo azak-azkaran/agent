@@ -33,7 +33,7 @@ func TestGocryptfsMountGocryptfs(t *testing.T) {
 		// clear location of executable
 		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
 
-	err = RunJob(cmd, "test")
+	err = RunJob(cmd, "test", false)
 	assert.NoError(t, err)
 
 	require.FileExists(t, GOCRYPT_TEST_FILE)
