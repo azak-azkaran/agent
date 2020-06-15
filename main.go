@@ -332,8 +332,8 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	resp, err := http.Post("http://"+AgentConfiguration.Address+"/mount",
-		"application/json", bytes.NewBuffer(reqBody))
+	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+"/mount",
+		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Println(ERROR_SENDING_REQUEST, err)
 		return
@@ -362,8 +362,8 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	resp, err = http.Post("http://"+AgentConfiguration.Address+"/backup",
-		"application/json", bytes.NewBuffer(reqBody))
+	resp, err = http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+MAIN_POST_ENDPOINT,
+		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Println(ERROR_SENDING_REQUEST, err)
 		return
@@ -396,8 +396,8 @@ func checkBackupRepository(token string) {
 		return
 	}
 
-	resp, err := http.Post("http://"+AgentConfiguration.Address+"/backup",
-		"application/json", bytes.NewBuffer(reqBody))
+	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+MAIN_POST_ENDPOINT,
+		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Println(ERROR_SENDING_REQUEST, err)
 		return
@@ -412,8 +412,8 @@ func checkBackupRepository(token string) {
 			log.Println(ERROR_UNMARSHAL, err)
 			return
 		}
-		_, err = http.Post("http://"+AgentConfiguration.Address+"/backup",
-			"application/json", bytes.NewBuffer(reqBody))
+		_, err = http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+MAIN_POST_ENDPOINT,
+			MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 		if err != nil {
 			log.Println(ERROR_SENDING_REQUEST, err)
 			return
@@ -467,7 +467,10 @@ func main() {
 			AgentConfiguration.DB.Close()
 		}
 
-		restServerAgent.Shutdown(context.Background())
+		err := restServerAgent.Shutdown(context.Background())
+		if err != nil {
+			log.Println(MAIN_ERROR_SHUTDOWN, err)
+		}
 	}()
 	err := Init(vault.DefaultConfig(), os.Args)
 	//log.Print("Please enter Token: ")
@@ -478,10 +481,10 @@ func main() {
 	restServerAgent, fun = RunRestServer(AgentConfiguration.Address)
 
 	go func() {
-		log.Println("Starting Run Function in 5 Seconds")
+		log.Println(MAIN_MESSAGE_START_RUNNING)
 		AgentConfiguration.Timer = time.AfterFunc(5*time.Second, run)
 	}()
 
-	log.Println("Starting the Rest Server")
+	log.Println(MAIN_MESSAGE_START_RESTSERVER)
 	fun()
 }

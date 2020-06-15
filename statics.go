@@ -20,9 +20,15 @@ const (
 	MAIN_MESSAGE_NOT_ENOUGH_KEYS    = "Not enough vault keys in storage"
 	MAIN_MESSAGE_START_UNSEAL       = "Starting to unseal Vault"
 	MAIN_MESSAGE_BACKUP_UNAVAILABLE = "Backup Repository is unavailable"
+	MAIN_MESSAGE_START_RESTSERVER   = "Starting the REST Server"
+	MAIN_MESSAGE_START_RUNNING      = "Starting the Agent RUN - Function in 5 Seconds"
+	MAIN_POST_HTTP                  = "http://"
+	MAIN_POST_ENDPOINT              = "/backup"
+	MAIN_POST_DATA_TYPE             = "application/json"
 
 	MAIN_ERROR_CHECK_SEAL = "Error while checking seal: "
 	MAIN_ERROR_UNSEAL     = "Error while unsealing vault: "
+	MAIN_ERROR_SHUTDOWN   = "Error shutting down: "
 
 	ERROR_DATABASE_NOT_FOUND = "Database is not initialized"
 	ERROR_KEY_NOT_FOUND      = "Key is not found: "
