@@ -21,12 +21,11 @@ const (
 	MAIN_MOUNT_ALLOW    = "mount_allow"
 	MAIN_VAULT_KEY_FILE = "vault_key_file"
 
-	MAIN_MESSAGE_NOT_ENOUGH_KEYS    = "Not enough vault keys in storage"
-	MAIN_MESSAGE_START_UNSEAL       = "Starting to unseal Vault"
-	MAIN_MESSAGE_BACKUP_UNAVAILABLE = "Backup Repository is unavailable"
-	MAIN_MESSAGE_START_RESTSERVER   = "Starting the REST Server"
-	MAIN_MESSAGE_START_RUNNING      = "Starting the Agent RUN - Function in 5 Seconds"
-	MAIN_MESSAGE_BACUP_INIT         = "Backup Repository not found will initialize it"
+	MAIN_MESSAGE_NOT_ENOUGH_KEYS  = "Not enough vault keys in storage"
+	MAIN_MESSAGE_START_UNSEAL     = "Starting to unseal Vault"
+	MAIN_MESSAGE_START_RESTSERVER = "Starting the REST Server"
+	MAIN_MESSAGE_START_RUNNING    = "Starting the Agent RUN - Function in 5 Seconds"
+	MAIN_MESSAGE_BACUP_INIT       = "Backup Repository not found will initialize it"
 
 	MAIN_POST_HTTP            = "http://"
 	MAIN_POST_BACKUP_ENDPOINT = "/backup"
