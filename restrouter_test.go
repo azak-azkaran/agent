@@ -271,7 +271,6 @@ func TestRestPostMount(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	mountMsg.Test = false
-	mountMsg.Run = true
 	reqBody, err = json.Marshal(mountMsg)
 	require.NoError(t, err)
 
@@ -281,7 +280,10 @@ func TestRestPostMount(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
+	assert.Eventually(t, func() bool {
+		_, err := os.Stat(GOCRYPT_TEST_FILE)
+		return err == nil
+	}, 2*time.Second, 10*time.Millisecond)
 	require.FileExists(t, GOCRYPT_TEST_FILE)
 	b, err := ioutil.ReadFile(GOCRYPT_TEST_FILE) // just pass the file name
 	assert.NoError(t, err)
