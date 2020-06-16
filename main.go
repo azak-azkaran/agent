@@ -388,22 +388,12 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+"/mount",
-		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
+	ok, err = SendRequest(reqBody, MAIN_POST_MOUNT_ENDPOINT)
 	if err != nil {
-		log.Println(ERROR_SENDING_REQUEST, err)
 		return
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(ERROR_READING_RESPONSE, err)
-			return
-		}
-		bodyString := string(bodyBytes)
-		log.Println("Error while mounting: ", bodyString)
+	if !ok {
+		return
 	}
 
 	checkBackupRepository(token)
@@ -419,24 +409,13 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	resp, err = http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+MAIN_POST_ENDPOINT,
-		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
+	ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
 	if err != nil {
-		log.Println(ERROR_SENDING_REQUEST, err)
 		return
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(ERROR_READING_RESPONSE, err)
-			return
-		}
-		bodyString := string(bodyBytes)
-		log.Println("Error while backup: ", bodyString)
-	} else {
+	if ok {
 		UpdateTimestamp(AgentConfiguration.DB, time.Now())
+		return
 	}
 }
 
@@ -453,31 +432,22 @@ func checkBackupRepository(token string) {
 		log.Println(ERROR_UNMARSHAL, err)
 		return
 	}
-
-	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+MAIN_POST_ENDPOINT,
-		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
+	ok, err := SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
 	if err != nil {
-		log.Println(ERROR_SENDING_REQUEST, err)
 		return
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Println(MAIN_MESSAGE_BACKUP_UNAVAILABLE)
-		backupMsg.Mode = "init"
-		reqBody, err := json.Marshal(backupMsg)
-		if err != nil {
-			log.Println(ERROR_UNMARSHAL, err)
-			return
-		}
-		_, err = http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+MAIN_POST_ENDPOINT,
-			MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
-		if err != nil {
-			log.Println(ERROR_SENDING_REQUEST, err)
-			return
-		}
+	if ok {
+		return
 	}
 
+	log.Println(MAIN_MESSAGE_BACUP_INIT)
+	backupMsg.Mode = "init"
+	reqBody, err = json.Marshal(backupMsg)
+	if err != nil {
+		log.Println(ERROR_UNMARSHAL, err)
+		return
+	}
+	SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
 }
 
 func unsealVault(seal *vault.SealStatusResponse) {
@@ -509,6 +479,28 @@ func run() {
 
 	Start(AgentConfiguration.MountDuration, AgentConfiguration.MountAllow)
 	AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
+}
+
+func SendRequest(reqBody []byte, endpoint string) (bool, error) {
+	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+endpoint,
+		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Println(ERROR_SENDING_REQUEST, err)
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(ERROR_READING_RESPONSE, err)
+			return false, err
+		}
+		bodyString := string(bodyBytes)
+		log.Println("Error while sending to:", endpoint, ": ", bodyString)
+		return false, nil
+	}
+	return true, nil
 }
 
 func main() {

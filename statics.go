@@ -26,10 +26,12 @@ const (
 	MAIN_MESSAGE_BACKUP_UNAVAILABLE = "Backup Repository is unavailable"
 	MAIN_MESSAGE_START_RESTSERVER   = "Starting the REST Server"
 	MAIN_MESSAGE_START_RUNNING      = "Starting the Agent RUN - Function in 5 Seconds"
+	MAIN_MESSAGE_BACUP_INIT         = "Backup Repository not found will initialize it"
 
-	MAIN_POST_HTTP      = "http://"
-	MAIN_POST_ENDPOINT  = "/backup"
-	MAIN_POST_DATA_TYPE = "application/json"
+	MAIN_POST_HTTP            = "http://"
+	MAIN_POST_BACKUP_ENDPOINT = "/backup"
+	MAIN_POST_MOUNT_ENDPOINT  = "/mount"
+	MAIN_POST_DATA_TYPE       = "application/json"
 
 	MAIN_ERROR_CHECK_SEAL = "Error while checking seal: "
 	MAIN_ERROR_UNSEAL     = "Error while unsealing vault: "
