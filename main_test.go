@@ -350,6 +350,52 @@ func TestMainCheckKeyFile(t *testing.T) {
 	assert.True(t, ok)
 }
 
+func TestMainSendRequest(t *testing.T) {
+	fmt.Println("running: TestMainSendRequest")
+	gin.SetMode(gin.TestMode)
+
+	msg := TokenMessage{
+		Token: "randomtoken",
+	}
+	req, err := json.Marshal(msg)
+	require.NoError(t, err)
+
+	router := gin.Default()
+	router.POST("/test", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "blub",
+		})
+	})
+	router.POST("/test1", func(c *gin.Context) {
+		var msg VaultKeyMessage
+		if err := c.BindJSON(&msg); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": err.Error(),
+			})
+			return
+		}
+
+	})
+	server = &http.Server{
+		Addr:    MAIN_TEST_ADDRESS,
+		Handler: router,
+	}
+	go server.ListenAndServe()
+	time.Sleep(100 * time.Millisecond)
+	AgentConfiguration.Address = MAIN_TEST_ADDRESS
+
+	ok, err := SendRequest(req, "/test")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	ok, err = SendRequest(req, "/test1")
+	assert.NoError(t, err)
+	assert.False(t, ok)
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+
 func checkContents() bool {
 	ok, err := IsEmpty("./test/tmp-mount")
 	if err != nil {
