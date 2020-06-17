@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 func createCmd(command string, env []string) *exec.Cmd {
@@ -26,12 +27,24 @@ func CheckRepo(env []string) *exec.Cmd {
 	return createCmd("restic check", env)
 }
 
-func Backup(path string, env []string, excludeFile string, upload int, download int) *exec.Cmd {
-	command := "restic backup " + path + " -x " +
-		" --exclude-file " + excludeFile +
-		" --tag 'full-home' " + //"-o s3.connections=10" +
-		" --limit-upload " + strconv.Itoa(upload) +
-		" --limit-download " + strconv.Itoa(download) //+
+func Backup(path string, env []string, exclude string, upload int, download int) *exec.Cmd {
+	var bud strings.Builder
+	excludes := strings.Split(exclude, "\n")
+
+	bud.WriteString("restic backup ")
+	bud.WriteString(path)
+	bud.WriteString(" -x ")
+	for _, v := range excludes {
+		bud.WriteString(" --exclude=\"")
+		bud.WriteString(v)
+		bud.WriteString("\"")
+	}
+	bud.WriteString(" --tag 'full-home'")
+	bud.WriteString(" --limit-upload ")
+	bud.WriteString(strconv.Itoa(upload))
+	bud.WriteString(" --limit-download ")
+	bud.WriteString(strconv.Itoa(download))
+	command := bud.String()
 	//" --quiet "
 
 	return createCmd(command, env)

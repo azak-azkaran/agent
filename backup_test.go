@@ -54,7 +54,8 @@ func TestBackupDoBackup(t *testing.T) {
 	cmd = Backup(pwd, env, BACKUP_TEST_EXCLUDE_FILE, 2000, 2000)
 	assert.Contains(t, cmd.String(), "restic backup ")
 	assert.Contains(t, cmd.String(), pwd)
-	assert.Contains(t, cmd.String(), "--exclude-file "+BACKUP_TEST_EXCLUDE_FILE)
+	assert.Contains(t, cmd.String(), "--exclude=\"./*.go\" ")
+	assert.Contains(t, cmd.String(), "--exclude=\"./test/exclude\" ")
 	assert.Contains(t, cmd.String(), "--limit-upload 2000")
 	assert.Contains(t, cmd.String(), "--limit-download 2000")
 

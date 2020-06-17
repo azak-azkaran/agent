@@ -65,7 +65,7 @@ const (
 	ERROR_READING_RESPONSE = "Error reading response: "
 
 	BACKUP_TEST_FOLDER       = "./test/Backup"
-	BACKUP_TEST_EXCLUDE_FILE = "./test/exclude"
+	BACKUP_TEST_EXCLUDE_FILE = "./test/exclude\n./*.go"
 	BACKUP_TEST_CONF_FILE    = "./test/Backup/config"
 
 	// Mount Constants For Tests
