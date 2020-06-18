@@ -94,9 +94,8 @@ func returnErr(err error, source string, c *gin.Context) {
 
 func postUnseal(c *gin.Context) {
 	var msg TokenMessage
-	err := c.BindJSON(&msg)
-	if err != nil {
-		returnErr(err, ERROR_BINDING, c)
+	if err := c.BindJSON(&msg); err != nil {
+		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
 
@@ -114,13 +113,13 @@ func postUnseal(c *gin.Context) {
 
 func postSeal(c *gin.Context) {
 	var msg TokenMessage
-	err := c.BindJSON(&msg)
-	if err != nil {
-		returnErr(err, ERROR_BINDING, c)
+	if err := c.BindJSON(&msg); err != nil {
+		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
+
 	AgentConfiguration.Token = msg.Token
-	err = Seal(AgentConfiguration.VaultConfig, AgentConfiguration.Token)
+	err := Seal(AgentConfiguration.VaultConfig, AgentConfiguration.Token)
 	if err != nil {
 		returnErr(err, ERROR_SEAL, c)
 		return
@@ -191,9 +190,8 @@ func getStatus(c *gin.Context) {
 
 func postMount(c *gin.Context) {
 	var msg MountMessage
-
 	if err := c.BindJSON(&msg); err != nil {
-		returnErr(err, ERROR_BINDING, c)
+		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
 
@@ -247,8 +245,7 @@ func postMount(c *gin.Context) {
 func postBackup(c *gin.Context) {
 	var msg BackupMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(msg)
-		returnErr(err, ERROR_BINDING, c)
+		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
 
@@ -299,8 +296,7 @@ func postBackup(c *gin.Context) {
 func postToken(c *gin.Context) {
 	var msg TokenMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(msg)
-		returnErr(err, ERROR_BINDING, c)
+		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
 
@@ -333,8 +329,7 @@ func getToken(c *gin.Context) {
 func postUnsealKey(c *gin.Context) {
 	var msg VaultKeyMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(msg)
-		returnErr(err, ERROR_BINDING, c)
+		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
 

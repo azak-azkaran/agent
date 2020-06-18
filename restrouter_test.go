@@ -18,6 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type DummyMessage struct {
+	Message string
+}
+
 func setupRestrouterTest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
@@ -468,4 +472,53 @@ func TestRestPostUnsealKey(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
+}
+func TestRestBindings(t *testing.T) {
+	fmt.Println("Running: TestRestBindings")
+	setupRestrouterTest(t)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+	msg := DummyMessage{
+		Message: "test",
+	}
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	log.Println("Agent rest server startet on: ", server.Addr)
+
+	reqBody, err := json.Marshal(msg)
+	require.NoError(t, err)
+
+	fmt.Println("Sending Body:", string(reqBody))
+	resp, err := http.Post(REST_TEST_TOKEN,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp, err = http.Post(REST_TEST_UNSEAL_KEY,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp, err = http.Post(REST_TEST_UNSEAL,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp, err = http.Post(REST_TEST_BACKUP,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp, err = http.Post(REST_TEST_MOUNT,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
 }
