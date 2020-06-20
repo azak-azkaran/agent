@@ -1,0 +1,33 @@
+[Unit]
+Description=Systemd configuration for a Golang Agent which automatically starts Backups
+Documentation=https://github.com/azak-azkaran/agent
+Wants=vault.target
+After=vault.target
+StartLimitInterval=200
+StartLimitBurst=5
+
+[Service]
+User=agent
+Group=agent
+DynamicUser=yes
+ExecStart=/usr/local/bin/agent -duration="2h"
+Restart=always
+ProtectHome=read-only
+ProtectSystem=full
+PrivateTmp=yes
+PrivateDevices=yes
+SecureBits=keep-caps
+AmbientCapabilities=CAP_IPC_LOCK
+CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+NoNewPrivileges=yes
+ExecReload=/bin/kill --signal HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
