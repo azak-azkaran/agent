@@ -199,9 +199,15 @@ func GetAgentConfig(config *vault.Config, token string, path string) (*AgentConf
 		return nil, err
 	}
 
+	list := []string{"restic", "gocryptfs"}
+	err = CheckMap(list, data)
+	if err != nil {
+		return nil, err
+	}
+
 	conf := AgentConfig{
-		Restic:    data["restic"].(string),
-		Gocryptfs: strings.Split(data["gocryptfs"].(string), ","),
+		Restic:    data[list[0]].(string),
+		Gocryptfs: strings.Split(data[list[1]].(string), ","),
 	}
 	return &conf, nil
 }
