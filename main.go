@@ -20,7 +20,6 @@ import (
 	"os/signal"
 	"time"
 
-	cqueue "github.com/enriquebris/goconcurrentqueue"
 	cmap "github.com/orcaman/concurrent-map"
 )
 

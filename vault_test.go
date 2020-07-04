@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	cqueue "github.com/enriquebris/goconcurrentqueue"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,6 @@ type TestConfig struct {
 }
 
 func readConfig(t *testing.T) TestConfig {
-	ConcurrentQueue = cqueue.NewFIFO()
 
 	require.FileExists(t, "./test/secret_mock.yml", "Token file not found")
 	viper.SetConfigName("secret_mock.yml")

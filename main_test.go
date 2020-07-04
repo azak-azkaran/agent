@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	cqueue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/gin-gonic/gin"
 	cmap "github.com/orcaman/concurrent-map"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,6 @@ func TestMainRunJobBackground(t *testing.T) {
 	require.True(t, ok)
 	job := v.(Job)
 
-	assert.True(t, ConcurrentQueue.GetLen() > 0)
 	assert.Equal(t, "hallo\n", job.Stdout.String())
 	assert.Equal(t, "", job.Stderr.String())
 }
@@ -150,12 +148,10 @@ func TestMainInit(t *testing.T) {
 	assert.Equal(t, AgentConfiguration.TimeBetweenStart, dur)
 	assert.Equal(t, AgentConfiguration.MountAllow, false)
 	assert.Equal(t, AgentConfiguration.MountDuration, MAIN_TEST_MOUNT_DURATION)
-	assert.NotNil(t, ConcurrentQueue)
 }
 
 func TestMainQueueJobStatus(t *testing.T) {
 	fmt.Println("running: TestMainQueueJobStatus")
-	ConcurrentQueue = cqueue.NewFIFO()
 
 	cmd := exec.Command("echo", "hallo")
 
@@ -175,7 +171,6 @@ func TestMainQueueJobStatus(t *testing.T) {
 func TestMainStart(t *testing.T) {
 	fmt.Println("running: TestMainStart")
 
-	ConcurrentQueue = cqueue.NewFIFO()
 	jobmap = cmap.New()
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
@@ -223,10 +218,6 @@ func TestMainStart(t *testing.T) {
 	},
 		time.Duration(25*time.Second), time.Duration(1*time.Second))
 
-	if ConcurrentQueue.GetLen() > 0 {
-		_, err = ConcurrentQueue.Dequeue()
-		assert.NoError(t, err)
-	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 

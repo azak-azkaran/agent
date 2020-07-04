@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	cqueue "github.com/enriquebris/goconcurrentqueue"
 	"github.com/gin-gonic/gin"
 )
 
@@ -133,20 +132,9 @@ func getIsSealed(c *gin.Context) {
 }
 
 func getLog(c *gin.Context) {
-	totalElements := ConcurrentQueue.GetLen()
-
-	var buffer bytes.Buffer
-	for i := 0; i < totalElements; i++ {
-		m, err := ConcurrentQueue.Get(i)
-		if err != nil {
-			returnErr(errors.New(buffer.String()+"\n"+err.Error()), ERROR_LOG, c)
-			return
-		}
-		buffer.WriteString(m.(string))
-	}
-	log.Println("INFO: Log: ", buffer.String())
+	log.Println("INFO: Log: ", "not implemented")
 	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: buffer.String(),
+		JSON_MESSAGE: "not implemented",
 	})
 }
 

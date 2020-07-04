@@ -48,10 +48,6 @@ func TestRestCreateRestHandler(t *testing.T) {
 		assert.Equal(t, http.ErrServerClosed, err)
 	}()
 
-	if ConcurrentQueue.GetLen() > 0 {
-		_, err := ConcurrentQueue.Dequeue()
-		assert.NoError(t, err)
-	}
 	err := server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
@@ -77,10 +73,6 @@ func TestRestRunRestServer(t *testing.T) {
 	bodyStr := strings.TrimSpace(string(body))
 	assert.Equal(t, bodyStr, "{\"message\":\"pong\"}")
 
-	if ConcurrentQueue.GetLen() > 0 {
-		_, err = ConcurrentQueue.Dequeue()
-		assert.NoError(t, err)
-	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
@@ -145,10 +137,6 @@ func TestRestHandleSeal(t *testing.T) {
 	bodyStr = strings.TrimSpace(string(body))
 	assert.Equal(t, bodyStr, "{\"message\":false}")
 
-	if ConcurrentQueue.GetLen() > 0 {
-		_, err = ConcurrentQueue.Dequeue()
-		assert.NoError(t, err)
-	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
@@ -181,7 +169,6 @@ func TestRestPostBackup(t *testing.T) {
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.NotEmpty(t, ConcurrentQueue)
 
 	backupMsg.Mode = "init"
 	backupMsg.Test = false
@@ -227,7 +214,6 @@ func TestRestPostBackup(t *testing.T) {
 		return j.Cmd.Process != nil && err == nil
 	},
 		time.Duration(25*time.Second), time.Duration(1*time.Second))
-	//assert.EqualValues(t, ConcurrentQueue.GetLen(), 3)
 
 	v, _ := jobmap.Get(backupMsg.Mode)
 	require.NotNil(t, v)
@@ -235,10 +221,6 @@ func TestRestPostBackup(t *testing.T) {
 
 	fmt.Println(cmd.Stdout.String())
 
-	if ConcurrentQueue.GetLen() > 0 {
-		_, err = ConcurrentQueue.Dequeue()
-		assert.NoError(t, err)
-	}
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
@@ -335,7 +317,6 @@ func TestRestStatus(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.NotEmpty(t, ConcurrentQueue)
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
@@ -373,7 +354,6 @@ func TestRestGetLog(t *testing.T) {
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	assert.NotEmpty(t, ConcurrentQueue)
 
 	resp, err = http.Get(REST_TEST_LOG)
 	assert.NoError(t, err)
@@ -423,8 +403,6 @@ func TestRestPostToken(t *testing.T) {
 
 	bodyString := string(bodyBytes)
 	assert.Contains(t, bodyString, tokenMessage.Token)
-
-	assert.NotEmpty(t, ConcurrentQueue)
 
 	ok := CheckToken(AgentConfiguration.DB)
 	assert.True(t, ok)
