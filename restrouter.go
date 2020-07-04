@@ -44,7 +44,6 @@ type MountMessage struct {
 func HandleBackup(cmd *exec.Cmd, mode string, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context) {
 	if err := function(cmd, mode, printOutput); err != nil {
 		log.Println(ERROR_PREFIX + err.Error())
-		enqueue(err.Error())
 		returnErr(err, ERROR_RUNBACKUP, c)
 		return
 	}
@@ -56,7 +55,6 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, function func(*exec.
 	for k, v := range cmds {
 		if err := function(v, "mount"+strconv.Itoa(k), printOutput); err != nil {
 			m := ERROR_PREFIX + ERROR_RUNMOUNT + err.Error()
-			enqueue(err.Error())
 			log.Println(m)
 			buffer.WriteString(m)
 			ok = false
@@ -74,19 +72,8 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, function func(*exec.
 
 }
 
-func enqueue(v interface{}) {
-	if ConcurrentQueue == nil {
-		ConcurrentQueue = cqueue.NewFIFO()
-	}
-	err := ConcurrentQueue.Enqueue(v)
-	if err != nil {
-		log.Println(ERROR_PREFIX+ERROR_ENQUEUE, err.Error())
-	}
-}
-
 func returnErr(err error, source string, c *gin.Context) {
 	log.Println(ERROR_PREFIX+source, err.Error())
-	enqueue(ERROR_PREFIX + source + " " + err.Error())
 	c.JSON(http.StatusInternalServerError, gin.H{
 		JSON_MESSAGE: err.Error(),
 	})

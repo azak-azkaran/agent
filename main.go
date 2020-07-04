@@ -25,7 +25,6 @@ import (
 )
 
 var AgentConfiguration Configuration
-var ConcurrentQueue *cqueue.FIFO
 var jobmap cmap.ConcurrentMap
 var stopChan = make(chan os.Signal, 2)
 var restServerAgent *http.Server
@@ -57,10 +56,6 @@ type Job struct {
 func HandleError(err error) bool {
 	if err != nil {
 		log.Println("ERROR: ", err)
-		err = ConcurrentQueue.Enqueue("ERROR: " + err.Error())
-		if err != nil {
-			log.Println("ERROR: Failed to enqueue: ", err)
-		}
 		return false
 	}
 	return true
@@ -70,17 +65,9 @@ func Log(toQueue string, p bool) {
 	if p {
 		log.Println("INFO: " + toQueue)
 	}
-	err := ConcurrentQueue.Enqueue(toQueue)
-	if err != nil {
-		log.Println("ERROR: Failed to enqueue, ", err)
-	}
 }
 
 func QueueJobStatus(job Job) {
-	if ConcurrentQueue == nil {
-		ConcurrentQueue = cqueue.NewFIFO()
-	}
-
 	if job.Cmd.Process == nil {
 		log.Println("Process not found")
 		return
@@ -247,7 +234,6 @@ func parseConfiguration(confi *Configuration) {
 }
 
 func Init(vaultConfig *vault.Config, args []string) error {
-	ConcurrentQueue = cqueue.NewFIFO()
 	jobmap = cmap.New()
 	addressCommend := pflag.NewFlagSet("agent", pflag.ContinueOnError)
 	addressCommend.String(MAIN_ADDRESS, "localhost:8081", "the addess on which rest server of the agent is startet")
