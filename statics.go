@@ -26,7 +26,9 @@ const (
 	MAIN_MESSAGE_START_UNSEAL     = "Starting to unseal Vault"
 	MAIN_MESSAGE_START_RESTSERVER = "Starting the REST Server"
 	MAIN_MESSAGE_START_RUNNING    = "Starting the Agent RUN - Function in 5 Seconds"
-	MAIN_MESSAGE_BACUP_INIT       = "Backup Repository not found will initialize it"
+	MAIN_MESSAGE_BACKUP_INIT      = "Backup Repository not found will initialize it"
+	MAIN_MESSAGE_BACKUP_SUCCESS   = "Backup Success"
+	MAIN_MESSAGE_BACKUP_ALREADY   = "Backup Check was already run at: "
 
 	MAIN_POST_HTTP            = "http://"
 	MAIN_POST_BACKUP_ENDPOINT = "/backup"
@@ -64,6 +66,7 @@ const (
 	ERROR_UNMARSHAL        = "Error marshaling message: "
 	ERROR_SENDING_REQUEST  = "Error sending request: "
 	ERROR_READING_RESPONSE = "Error reading response: "
+	ERROR_TIMESTAMP        = "Error retrieving timestamp: "
 
 	BACKUP_TEST_FOLDER       = "./test/Backup"
 	BACKUP_TEST_EXCLUDE_FILE = "./test/exclude\n./*.go"

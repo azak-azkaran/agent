@@ -347,21 +347,69 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 	return &config, nil
 }
 
-func Start(Duration string, AllowOther bool) {
+func checkRequirementsForBackup() (string, bool) {
 	if AgentConfiguration.DB == nil {
 		log.Println(ERROR_DATABASE_NOT_FOUND)
-		return
+		return "", false
 	}
 
 	ok := CheckToken(AgentConfiguration.DB)
 	if !ok {
 		log.Println("Token is not set")
-		return
+		return "", false
 	}
 
 	token, err := GetToken(AgentConfiguration.DB)
 	if err != nil {
 		log.Println("Read token failed: ", err)
+		return "", false
+	}
+	return token, true
+}
+func CheckBackupRepository() {
+	token, ok := checkRequirementsForBackup()
+	if !ok {
+		return
+	}
+
+	t, err := GetTimestamp(AgentConfiguration.DB)
+	if err != nil {
+		log.Println(ERROR_TIMESTAMP, err)
+	}
+
+	t.Add(24 * time.Hour)
+	now := time.Now()
+	if now.After(t) {
+		checkBackupRepositoryExists(token)
+		backupMsg := BackupMessage{
+			Mode:        "check",
+			Token:       token,
+			PrintOutput: true,
+		}
+
+		reqBody, err := json.Marshal(backupMsg)
+		if err != nil {
+			log.Println(ERROR_UNMARSHAL, err)
+			return
+		}
+
+		ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+		if err != nil {
+			return
+		}
+		if ok {
+			UpdateTimestamp(AgentConfiguration.DB, now)
+			return
+		}
+	} else {
+		log.Println(MAIN_MESSAGE_BACKUP_ALREADY, t.String())
+	}
+
+}
+
+func Start(Duration string, AllowOther bool) {
+	token, ok := checkRequirementsForBackup()
+	if !ok {
 		return
 	}
 
@@ -386,7 +434,7 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 
-	checkBackupRepository(token)
+	checkBackupRepositoryExists(token)
 	backupMsg := BackupMessage{
 		Mode:        "backup",
 		Token:       token,
@@ -404,12 +452,12 @@ func Start(Duration string, AllowOther bool) {
 		return
 	}
 	if ok {
-		UpdateTimestamp(AgentConfiguration.DB, time.Now())
+		log.Println(MAIN_MESSAGE_BACKUP_SUCCESS, err)
 		return
 	}
 }
 
-func checkBackupRepository(token string) {
+func checkBackupRepositoryExists(token string) {
 	backupMsg := BackupMessage{
 		Mode:        "exist",
 		Token:       token,
@@ -430,7 +478,7 @@ func checkBackupRepository(token string) {
 		return
 	}
 
-	log.Println(MAIN_MESSAGE_BACUP_INIT)
+	log.Println(MAIN_MESSAGE_BACKUP_INIT)
 	backupMsg.Mode = "init"
 	reqBody, err = json.Marshal(backupMsg)
 	if err != nil {

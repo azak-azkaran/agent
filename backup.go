@@ -46,6 +46,5 @@ func Backup(path string, env []string, exclude string, upload int, download int)
 	bud.WriteString(strconv.Itoa(download))
 	command := bud.String()
 	//" --quiet "
-
 	return createCmd(command, env)
 }

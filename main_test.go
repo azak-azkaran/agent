@@ -188,23 +188,9 @@ func TestMainStart(t *testing.T) {
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	go fun()
-
-	time.Sleep(1 * time.Millisecond)
-	go Start("5s", false)
-	time.Sleep(1 * time.Millisecond)
-
-	tokenMessage := TokenMessage{
-		Token: "randomtoken",
-	}
-	reqBody, err := json.Marshal(tokenMessage)
-	require.NoError(t, err)
-
-	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post(REST_TEST_TOKEN,
-		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
+	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
 	assert.NoError(t, err)
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, ok)
 
 	Start("5s", false)
 
@@ -216,7 +202,7 @@ func TestMainStart(t *testing.T) {
 		j := v.(Job)
 		return j.Cmd.Process != nil
 	},
-		time.Duration(25*time.Second), time.Duration(1*time.Second))
+		time.Duration(20*time.Second), time.Duration(1*time.Second))
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
@@ -385,6 +371,59 @@ func TestMainSendRequest(t *testing.T) {
 
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
+}
+
+func TestMainCheckBackupRepository(t *testing.T) {
+	fmt.Println("running: TestMainCheckBackupRepository")
+
+	jobmap = cmap.New()
+	gin.SetMode(gin.TestMode)
+	testconfig := readConfig(t)
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
+	os.Setenv("AGENT_DURATION", testconfig.Duration)
+	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	err := Init(testconfig.config, os.Args)
+	require.NoError(t, err)
+
+	_, err = Unseal(testconfig.config, testconfig.secret)
+	require.NoError(t, err)
+
+	AgentConfiguration.DB = InitDB("", "", true)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+	go fun()
+
+	time.Sleep(1 * time.Millisecond)
+	CheckBackupRepository()
+
+	assert.Eventually(t, func() bool {
+		timestamp, err := GetTimestamp(AgentConfiguration.DB)
+		if err != nil {
+			return false
+		}
+
+		return timestamp != time.Unix(0, 0)
+	},
+		time.Duration(20*time.Second), time.Duration(1*time.Second))
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	err = RemoveContents(BACKUP_TEST_FOLDER)
+	assert.NoError(t, err)
+	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
+
+	AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
+	err = RemoveContents("./test/DB/")
+	assert.NoError(t, err)
+	assert.NoFileExists(t, "./test/DB/MANIFEST")
+	time.Sleep(1 * time.Millisecond)
 }
 
 func checkContents() bool {
