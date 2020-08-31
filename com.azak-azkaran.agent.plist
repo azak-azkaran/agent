@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>             <string>com.azak-azkaran.agent</string>
+    <key>Disabled</key>          <false/>
+    <key>RunAtLoad</key>         <true/>
+    <key>KeepAlive</key>         <false/>
+    <key>LaunchOnlyOnce</key>    <true/>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/agent</string>
+        <string>--duration="2h"</string>
+    </array>
+    <key>StandardOutPath</key>   <string>/var/log/agent/agent.log</string>
+    <key>StandardErrorPath</key> <string>/var/log/agent/agent.log</string>
+</dict>
+</plist>
