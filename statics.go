@@ -20,6 +20,7 @@ const (
 	MAIN_MOUNT_DURATION = "mount_duration"
 	MAIN_MOUNT_ALLOW    = "mount_allow"
 	MAIN_VAULT_KEY_FILE = "vault_key_file"
+	MAIN_VAULT_ADDRESS  = "vault_address"
 
 	MAIN_MESSAGE_NOT_ENOUGH_KEYS  = "Not enough vault keys in storage"
 	MAIN_MESSAGE_START_UNSEAL     = "Starting to unseal Vault"

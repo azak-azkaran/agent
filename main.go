@@ -220,12 +220,16 @@ func parseConfiguration(confi *Configuration) {
 		confi.VaultKeyFile = ""
 	}
 
+	if viper.IsSet(MAIN_VAULT_ADDRESS) {
+		confi.VaultConfig.Address = viper.GetString(MAIN_VAULT_ADDRESS)
+	}
+
 	log.Println("Agent initalzing on: ", confi.Hostname)
 	log.Println("Agent Configuration:",
 		"\nAddress: ", confi.Address,
 		"\nPath to DB:", confi.PathDB,
 		"\nTime Between Backup Runs: ", confi.TimeBetweenStart,
-		"\nVaultAddress: ", confi.VaultConfig.Address,
+		"\nVault Address: ", confi.VaultConfig.Address,
 		"\nVault KeyFile path: ", confi.VaultKeyFile,
 		"\nMount Duration: ", confi.MountDuration,
 		"\nMount AllowOther: ", confi.MountAllow,
@@ -241,6 +245,7 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend.String(MAIN_MOUNT_DURATION, "", "The Duration how long the gocrypt should be mounted")
 	addressCommend.String(MAIN_MOUNT_ALLOW, "true", "If the gocrypt mount should be allowed by other users")
 	addressCommend.String(MAIN_VAULT_KEY_FILE, "", "File in which the vault keys are stored for easy save into Badger database")
+	addressCommend.String(MAIN_VAULT_ADDRESS, "https://localhost:8200", "The address to the vault server")
 
 	err := bindEnviorment()
 	if err != nil {
