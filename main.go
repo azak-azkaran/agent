@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/dgraph-io/badger/v2"
 	vault "github.com/hashicorp/vault/api"
@@ -331,14 +332,10 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 		return nil, err
 	}
 	config.Restic = restic
+	crypts := strings.Split(config.Agent.Gocryptfs, ",")
 
-	for _, name := range config.Agent.Gocryptfs {
+	for _, name := range crypts {
 		gocrypt, err := GetGocryptConfig(vaultConfig, token, name)
-		if err != nil {
-			return nil, err
-		}
-		gocrypt.AllowOther = true
-		gocrypt.Duration, err = time.ParseDuration("0s")
 		if err != nil {
 			return nil, err
 		}
@@ -377,7 +374,7 @@ func CheckBackupRepository() {
 		log.Println(ERROR_TIMESTAMP, err)
 	}
 
-	t.Add(24 * time.Hour)
+	t.Add(12 * time.Hour)
 	now := time.Now()
 	if now.After(t) {
 		checkBackupRepositoryExists(token)
@@ -407,17 +404,15 @@ func CheckBackupRepository() {
 
 }
 
-func Start(Duration string, AllowOther bool) {
+func Start() {
 	token, ok := checkRequirementsForBackup()
 	if !ok {
 		return
 	}
 
 	mountMsg := MountMessage{
-		Token:      token,
-		Duration:   Duration,
-		AllowOther: AllowOther,
-		Run:        true,
+		Token: token,
+		Run:   true,
 	}
 
 	reqBody, err := json.Marshal(mountMsg)
@@ -515,7 +510,7 @@ func run() {
 		unsealVault(seal)
 	}
 
-	Start(AgentConfiguration.MountDuration, AgentConfiguration.MountAllow)
+	Start()
 	AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
 }
 

@@ -192,7 +192,7 @@ func TestMainStart(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ok)
 
-	Start("5s", false)
+	Start()
 
 	time.Sleep(1 * time.Millisecond)
 	assert.Eventually(t, func() bool {

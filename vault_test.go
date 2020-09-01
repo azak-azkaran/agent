@@ -81,6 +81,8 @@ func TestVaultGetGocryptConfig(t *testing.T) {
 	assert.NotNil(t, conf.Path)
 	assert.NotNil(t, conf.MountPoint)
 	assert.NotNil(t, conf.Password)
+	assert.True(t, conf.NotEmpty)
+	assert.False(t, conf.AllowOther)
 }
 
 func TestVaultGetResticConfig(t *testing.T) {
@@ -131,20 +133,6 @@ func TestVaultUnseal(t *testing.T) {
 	seal, err = IsSealed(testconfig.config)
 	require.NoError(t, err)
 	assert.False(t, seal)
-}
-
-func TestVaultCheckMap(t *testing.T) {
-	fmt.Println("running: TestVaultCheckMap")
-
-	list := []string{"test"}
-	data := make(map[string]interface{})
-	data["test"] = "test"
-	err := CheckMap(list, data)
-	assert.NoError(t, err)
-
-	list = append(list, "test2")
-	err = CheckMap(list, data)
-	assert.Error(t, err)
 }
 
 func TestVaultSealStatus(t *testing.T) {

@@ -99,12 +99,13 @@ func test_gocrypt(c *gin.Context) {
 	log.Println("MOCK-Server: called gocrypt")
 	var msg vault.Secret
 	data := make(map[string]interface{})
-	secret := make(map[string]string)
+	secret := make(map[string]interface{})
 
 	secret["path"] = VAULT_TEST_PATH
 	secret["mount-path"] = VAULT_TEST_MOUNTPATH
 	secret["pw"] = VAULT_TEST_PASSWORD
-	secret["duration"] = "3s"
+	secret["duration"] = "5s"
+	secret["notempty"] = "true"
 	data["data"] = secret
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)

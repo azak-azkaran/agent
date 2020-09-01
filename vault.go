@@ -1,54 +1,37 @@
 package main
 
 import (
-	"bytes"
 	"errors"
-	"log"
-	"strings"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 
 	vault "github.com/hashicorp/vault/api"
 )
 
 type AgentConfig struct {
-	Gocryptfs []string
-	Restic    string
+	Gocryptfs string `mapstructure:"gocryptfs"`
+	Restic    string `mapstructure:"restic"`
 }
 
 type GocryptConfig struct {
-	MountPoint string
-	Path       string
-	Password   string
-	AllowOther bool
-	Duration   time.Duration
+	MountPoint    string `mapstructure:"mount-path"`
+	Path          string `mapstructure:"path"`
+	Password      string `mapstructure:"pw"`
+	AllowOther    bool   `mapstructure:"allow"`
+	NotEmpty      bool   `mapstructure:"notempty"`
+	Duration      string `mapstructure:"duration"`
+	MountDuration time.Duration
 }
 
 type ResticConfig struct {
-	Password    string
-	Path        string
-	Repo        string
-	ExcludePath string
-	SecretKey   string
-	AccessKey   string
+	Password    string `mapstructure:"pw"`
+	Path        string `mapstructure:"path"`
+	Repo        string `mapstructure:"repo"`
+	ExcludePath string `mapstructure:"exclude"`
+	SecretKey   string `mapstructure:"secret_key"`
+	AccessKey   string `mapstructure:"access_key"`
 	Environment []string
-}
-
-func CheckMap(list []string, data map[string]interface{}) error {
-	var message bytes.Buffer
-	message.WriteString("Data in Vault malformed")
-	fail := false
-	for _, v := range list {
-		if data[v] == nil {
-			message.WriteString("\n\t" + v + ": missing")
-			fail = true
-		}
-	}
-
-	if fail {
-		log.Println(message.String())
-		return errors.New(message.String())
-	}
-	return nil
 }
 
 func Seal(config *vault.Config, token string) error {
@@ -146,27 +129,18 @@ func GetResticConfig(config *vault.Config, token string, path string) (*ResticCo
 		return nil, err
 	}
 
-	list := []string{"repo", "path", "exclude", "pw", "access_key", "secret_key"}
-	err = CheckMap(list, data)
+	var conf ResticConfig
+	err = mapstructure.Decode(data, &conf)
 	if err != nil {
 		return nil, err
 	}
-
-	conf := ResticConfig{
-		Repo:        data[list[0]].(string),
-		Path:        data[list[1]].(string),
-		ExcludePath: data[list[2]].(string),
-		Password:    data[list[3]].(string),
-		AccessKey:   data[list[4]].(string),
-		SecretKey:   data[list[5]].(string),
-	}
-
 	conf.Environment = []string{
 		RESTIC_ACCESS_KEY + conf.AccessKey,
 		RESTIC_SECRET_KEY + conf.SecretKey,
 		RESTIC_REPOSITORY + conf.Repo,
 		RESTIC_PASSWORD + conf.Password,
 	}
+
 	if data["exclude"] != nil {
 		conf.ExcludePath = data["exclude"].(string)
 	}
@@ -179,16 +153,29 @@ func GetGocryptConfig(config *vault.Config, token string, path string) (*Gocrypt
 		return nil, err
 	}
 
-	list := []string{"mount-path", "path", "pw"}
-	err = CheckMap(list, data)
+	var conf GocryptConfig
+	decoderConfig := mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Result:           &conf,
+	}
+
+	decoder, err := mapstructure.NewDecoder(&decoderConfig)
+	if err != nil {
+		return nil, err
+	}
+	err = decoder.Decode(data)
 	if err != nil {
 		return nil, err
 	}
 
-	conf := GocryptConfig{
-		MountPoint: data[list[0]].(string),
-		Path:       data[list[1]].(string),
-		Password:   data[list[2]].(string),
+	if conf.Duration == "" {
+		conf.MountDuration, err = time.ParseDuration("0s")
+	} else {
+
+		conf.MountDuration, err = time.ParseDuration(conf.Duration)
+	}
+	if err != nil {
+		return nil, err
 	}
 	return &conf, nil
 }
@@ -199,15 +186,11 @@ func GetAgentConfig(config *vault.Config, token string, path string) (*AgentConf
 		return nil, err
 	}
 
-	list := []string{"restic", "gocryptfs"}
-	err = CheckMap(list, data)
+	var conf AgentConfig
+	err = mapstructure.Decode(data, &conf)
 	if err != nil {
 		return nil, err
 	}
 
-	conf := AgentConfig{
-		Restic:    data[list[0]].(string),
-		Gocryptfs: strings.Split(data[list[1]].(string), ","),
-	}
 	return &conf, nil
 }

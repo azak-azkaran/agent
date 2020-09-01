@@ -27,7 +27,7 @@ func TestGocryptfsMountGocryptfs(t *testing.T) {
 	_ = os.Mkdir(GOCRYPT_TEST_MOUNTPATH, 0700)
 	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
 
-	cmd := MountGocryptfs("./test/tmp", GOCRYPT_TEST_MOUNTPATH, idletime, "hallo", false)
+	cmd := MountGocryptfs("./test/tmp", GOCRYPT_TEST_MOUNTPATH, idletime, "hallo", false, false)
 
 	assert.Contains(t, cmd.String(), "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
 		// clear location of executable
@@ -54,11 +54,11 @@ func TestGocryptfsMountFolders(t *testing.T) {
 	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
 
 	config := GocryptConfig{
-		MountPoint: GOCRYPT_TEST_MOUNTPATH,
-		Path:       GOCRYPT_TEST_FOLDER,
-		AllowOther: false,
-		Password:   "hallo",
-		Duration:   idletime,
+		MountPoint:    GOCRYPT_TEST_MOUNTPATH,
+		Path:          GOCRYPT_TEST_FOLDER,
+		AllowOther:    false,
+		Password:      "hallo",
+		MountDuration: idletime,
 	}
 	var configs []GocryptConfig
 	configs = append(configs, config, config)

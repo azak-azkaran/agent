@@ -237,11 +237,9 @@ func TestRestPostMount(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	mountMsg := MountMessage{
-		Test:       true,
-		Token:      "randomtoken",
-		Debug:      true,
-		Duration:   "5s",
-		AllowOther: false,
+		Test:  true,
+		Token: "randomtoken",
+		Debug: true,
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)

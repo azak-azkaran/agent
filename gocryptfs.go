@@ -13,8 +13,8 @@ import (
 func MountFolders(config []GocryptConfig) []*exec.Cmd {
 	var output []*exec.Cmd
 	for i, folderconfig := range config {
-		log.Println("Mounting: ", i, " with name: ", AbsolutePath(folderconfig.MountPoint), " Duration", folderconfig.Duration.String(), " AllowOther", folderconfig.AllowOther)
-		cmd := MountGocryptfs(folderconfig.Path, folderconfig.MountPoint, folderconfig.Duration, folderconfig.Password, folderconfig.AllowOther)
+		log.Println("Mounting: ", i, " with name: ", AbsolutePath(folderconfig.MountPoint), " Duration", folderconfig.MountDuration.String(), " AllowOther", folderconfig.AllowOther)
+		cmd := MountGocryptfs(folderconfig.Path, folderconfig.MountPoint, folderconfig.MountDuration, folderconfig.Password, folderconfig.AllowOther, folderconfig.NotEmpty)
 		empty, err := IsEmpty(folderconfig.MountPoint)
 		if err != nil {
 			log.Println("ERROR", err)
@@ -29,16 +29,16 @@ func MountFolders(config []GocryptConfig) []*exec.Cmd {
 	return output
 }
 
-func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string, allowOther bool) *exec.Cmd {
+func MountGocryptfs(cryptoDir string, folder string, duration time.Duration, pwd string, allowOther bool, nonempty bool) *exec.Cmd {
 	var cmd *exec.Cmd
 	var command string
 
 	command = "gocryptfs"
 	if allowOther {
 		command = command + " -allow_other"
-		//cmd = exec.Command("gocryptfs", "-allow_other", "-i", duration.String(), AbsolutePath(cryptoDir), AbsolutePath(folder))
-		//} else {
-		//	cmd = exec.Command("gocryptfs", "-i", duration.String(), AbsolutePath(cryptoDir), AbsolutePath(folder))
+	}
+	if nonempty {
+		command = command + " -nonempty"
 	}
 	if duration.String() != "0s" {
 		command = command + " -i " + duration.String()

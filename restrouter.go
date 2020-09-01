@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,8 +34,6 @@ type MountMessage struct {
 	Run         bool   `json:"run"`
 	Test        bool   `json:"test"`
 	Debug       bool   `json:"debug"`
-	Duration    string `json:"duration"`
-	AllowOther  bool   `json:"allowOther"`
 	PrintOutput bool   `json:"print"`
 }
 
@@ -171,24 +168,12 @@ func postMount(c *gin.Context) {
 	}
 
 	config, err := GetConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
-	if err != nil || config.Agent.Gocryptfs == nil {
+	if err != nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
 
-	var dur time.Duration
-	if msg.Duration != "" {
-		dur, err = time.ParseDuration(msg.Duration)
-		if err != nil {
-			log.Println("ERROR: Failed to parse duration", err)
-		} else {
-			dur = 5 * time.Second
-		}
-	}
-
 	for i, v := range config.Gocrypt {
-		v.Duration = dur
-		v.AllowOther = msg.AllowOther
 		config.Gocrypt[i] = v
 	}
 

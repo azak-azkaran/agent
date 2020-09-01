@@ -19,7 +19,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.6 // indirect
 	github.com/hashicorp/vault/api v1.0.5-0.20190730042357-746c0b111519
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
-	github.com/mitchellh/mapstructure v1.3.0 // indirect
+	github.com/mitchellh/mapstructure v1.3.0
 	github.com/nsf/gocode v0.0.0-20190302080247-5bee97b48836 // indirect
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6
 	github.com/pelletier/go-toml v1.7.0 // indirect
