@@ -10,8 +10,9 @@ import (
 )
 
 type AgentConfig struct {
-	Gocryptfs string `mapstructure:"gocryptfs"`
-	Restic    string `mapstructure:"restic"`
+	Gocryptfs  string `mapstructure:"gocryptfs"`
+	Restic     string `mapstructure:"restic"`
+	HomeFolder string `mapstructure:"home"`
 }
 
 type GocryptConfig struct {
