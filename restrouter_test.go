@@ -205,17 +205,27 @@ func TestRestPostBackup(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 	assert.Eventually(t, func() bool {
-		v, ok := jobmap.Get(backupMsg.Mode)
-		require.True(t, ok)
-		require.NotNil(t, v)
-		j := v.(Job)
+		for value := range jobmap.IterBuffered() {
+			if strings.Contains(value.Key, backupMsg.Mode) {
+				require.NotNil(t, value.Val)
+				j := value.Val.(Job)
 
-		_, err := os.Stat(BACKUP_TEST_CONF_FILE)
-		return j.Cmd.Process != nil && err == nil
+				_, err := os.Stat(BACKUP_TEST_CONF_FILE)
+				return j.Cmd.Process != nil && err == nil
+			}
+		}
+		return false
 	},
 		time.Duration(25*time.Second), time.Duration(1*time.Second))
 
-	v, _ := jobmap.Get(backupMsg.Mode)
+	var v interface{}
+	for value := range jobmap.IterBuffered() {
+		if strings.Contains(value.Key, backupMsg.Mode) {
+			v = value.Val
+			break
+		}
+	}
+
 	require.NotNil(t, v)
 	cmd := v.(Job)
 
@@ -249,7 +259,7 @@ func TestRestPostMount(t *testing.T) {
 
 	resp, err := http.Post(REST_TEST_MOUNT,
 		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)

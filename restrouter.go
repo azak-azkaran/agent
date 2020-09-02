@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,8 +38,8 @@ type MountMessage struct {
 	PrintOutput bool   `json:"print"`
 }
 
-func HandleBackup(cmd *exec.Cmd, mode string, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context) {
-	if err := function(cmd, mode, printOutput); err != nil {
+func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context) {
+	if err := function(cmd, name, printOutput); err != nil {
 		log.Println(ERROR_PREFIX + err.Error())
 		returnErr(err, ERROR_RUNBACKUP, c)
 		return
@@ -239,16 +240,18 @@ func postBackup(c *gin.Context) {
 		log.Println("Config", config.Restic)
 	}
 
+	name := msg.Mode + time.Now().String()
+
 	if msg.Test {
-		HandleBackup(cmd, msg.Mode, true, DontRun, c)
+		HandleBackup(cmd, name, true, DontRun, c)
 		return
 	}
 
 	if msg.Run {
-		HandleBackup(cmd, msg.Mode, msg.PrintOutput, RunJob, c)
+		HandleBackup(cmd, name, msg.PrintOutput, RunJob, c)
 		return
 	} else {
-		HandleBackup(cmd, msg.Mode, msg.PrintOutput, RunJobBackground, c)
+		HandleBackup(cmd, name, msg.PrintOutput, RunJobBackground, c)
 		return
 	}
 }

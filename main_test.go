@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -195,13 +196,7 @@ func TestMainStart(t *testing.T) {
 	Start()
 
 	time.Sleep(1 * time.Millisecond)
-	assert.Eventually(t, func() bool {
-		v, ok := jobmap.Get("backup")
-		require.True(t, ok)
-		require.NotNil(t, v)
-		j := v.(Job)
-		return j.Cmd.Process != nil
-	},
+	assert.Eventually(t, checkJobmap,
 		time.Duration(20*time.Second), time.Duration(1*time.Second))
 
 	err = server.Shutdown(context.Background())
@@ -272,6 +267,7 @@ func TestMainMain(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 	assert.Eventually(t, checkContents, 20*time.Second, 1*time.Second)
+	assert.Eventually(t, checkJobmap, 20*time.Second, 1*time.Second)
 
 	stopChan <- syscall.SIGINT
 	time.Sleep(10 * time.Second)
@@ -424,6 +420,16 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoFileExists(t, "./test/DB/MANIFEST")
 	time.Sleep(1 * time.Millisecond)
+}
+
+func checkJobmap() bool {
+	for item := range jobmap.IterBuffered() {
+		if strings.Contains(item.Key, "check") {
+			j := item.Val.(Job)
+			return j.Cmd.Process != nil
+		}
+	}
+	return false
 }
 
 func checkContents() bool {

@@ -404,7 +404,7 @@ func CheckBackupRepository() {
 
 }
 
-func Start() {
+func mountFolders() {
 	token, ok := checkRequirementsForBackup()
 	if !ok {
 		return
@@ -428,6 +428,13 @@ func Start() {
 	if !ok {
 		return
 	}
+}
+
+func backup() {
+	token, ok := checkRequirementsForBackup()
+	if !ok {
+		return
+	}
 
 	checkBackupRepositoryExists(token)
 	backupMsg := BackupMessage{
@@ -436,7 +443,7 @@ func Start() {
 		PrintOutput: true,
 	}
 
-	reqBody, err = json.Marshal(backupMsg)
+	reqBody, err := json.Marshal(backupMsg)
 	if err != nil {
 		log.Println(ERROR_UNMARSHAL, err)
 		return
@@ -447,7 +454,7 @@ func Start() {
 		return
 	}
 	if ok {
-		log.Println(MAIN_MESSAGE_BACKUP_SUCCESS, err)
+		log.Println(MAIN_MESSAGE_BACKUP_SUCCESS)
 		return
 	}
 }
@@ -481,6 +488,12 @@ func checkBackupRepositoryExists(token string) {
 		return
 	}
 	SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+}
+
+func Start() {
+	mountFolders()
+	backup()
+	CheckBackupRepository()
 }
 
 func unsealVault(seal *vault.SealStatusResponse) {
