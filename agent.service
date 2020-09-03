@@ -5,6 +5,8 @@ StartLimitInterval=200
 StartLimitBurst=5
 
 [Service]
+User=
+Group=
 ExecStart=/usr/local/bin/agent --duration="2h" --vault_address="http://127.0.0.1:8200"
 Restart=always
 PrivateTmp=yes
