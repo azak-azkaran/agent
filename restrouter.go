@@ -231,6 +231,8 @@ func postBackup(c *gin.Context) {
 			config.Restic.ExcludePath,
 			2000,
 			2000)
+	case "unlock":
+		cmd = UnlockRepo(config.Restic.Environment)
 	default:
 		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
 		return
@@ -240,7 +242,7 @@ func postBackup(c *gin.Context) {
 		log.Println("Config", config.Restic)
 	}
 
-	name := msg.Mode + time.Now().String()
+	name := msg.Mode + time.Now().Format(time.UnixDate)
 
 	if msg.Test {
 		HandleBackup(cmd, name, true, DontRun, c)

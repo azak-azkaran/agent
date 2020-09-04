@@ -382,6 +382,7 @@ func CheckBackupRepository() {
 			Mode:        "check",
 			Token:       token,
 			PrintOutput: true,
+			Run:         true,
 		}
 
 		reqBody, err := json.Marshal(backupMsg)
@@ -441,6 +442,7 @@ func backup() {
 		Mode:        "backup",
 		Token:       token,
 		PrintOutput: true,
+		Run:         true,
 	}
 
 	reqBody, err := json.Marshal(backupMsg)

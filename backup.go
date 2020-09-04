@@ -27,6 +27,14 @@ func CheckRepo(env []string) *exec.Cmd {
 	return createCmd("restic check", env)
 }
 
+func UnlockRepo(env []string) *exec.Cmd {
+	return createCmd("restic unlock", env)
+}
+
+func PruneRepo(env []string) *exec.Cmd {
+	return createCmd("restic prune", env)
+}
+
 func Backup(path string, env []string, exclude string, upload int, download int) *exec.Cmd {
 	var bud strings.Builder
 	excludes := strings.Split(exclude, "\n")
