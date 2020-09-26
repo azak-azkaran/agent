@@ -39,28 +39,68 @@ type MountMessage struct {
 }
 
 type GitMessage struct {
+	Mode        string `json:"mode" binding:"required"`
 	Token       string `json:"token" binding:"required"`
 	Run         bool   `json:"run"`
 	Debug       bool   `json:"debug"`
 	PrintOutput bool   `json:"print"`
 }
 
-func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context) {
-	if err := function(cmd, name, printOutput); err != nil {
-		log.Println(ERROR_PREFIX + err.Error())
-		returnErr(err, ERROR_RUNBACKUP, c)
-		return
+func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, test bool, run bool, c *gin.Context) {
+
+	job := CreateJobFromCommand(cmd, name)
+	var err error
+	if test {
+		err = job.DontRun(printOutput)
+	} else {
+		if run {
+			err = job.RunJob(printOutput)
+		} else {
+			err = job.RunJobBackground(printOutput)
+		}
 	}
-	c.JSON(http.StatusOK, gin.H{})
+
+	if err != nil {
+		returnErr(err, ERROR_RUNBACKUP, c)
+	} else {
+		c.JSON(http.StatusOK, gin.H{})
+	}
+
 }
 
-func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context, buffer bytes.Buffer) {
+func handleError(err error, errMsg string, buffer bytes.Buffer) bool {
+	if err != nil {
+		m := ERROR_PREFIX + errMsg + err.Error()
+		log.Println(m)
+		buffer.WriteString(m)
+		return false
+	}
+	return true
+}
+
+func HandleMount(job Job, printOutput bool, test bool, run bool, c *gin.Context, buffer bytes.Buffer) bool {
+	var err error
+	if test {
+		err = job.DontRun(printOutput)
+		return handleError(err, ERROR_RUNMOUNT, buffer)
+	} else {
+
+		if run {
+			err = job.RunJob(printOutput)
+			return handleError(err, ERROR_RUNMOUNT, buffer)
+
+		} else {
+			err = job.RunJobBackground(printOutput)
+			return handleError(err, ERROR_RUNMOUNT, buffer)
+		}
+	}
+}
+
+func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool, c *gin.Context, buffer bytes.Buffer) {
 	ok := true
 	for k, v := range cmds {
-		if err := function(v, "mount"+strconv.Itoa(k), printOutput); err != nil {
-			m := ERROR_PREFIX + ERROR_RUNMOUNT + err.Error()
-			log.Println(m)
-			buffer.WriteString(m)
+		job := CreateJobFromCommand(v, "mount"+strconv.Itoa(k))
+		if !HandleMount(job, printOutput, test, run, c, buffer) {
 			ok = false
 		}
 	}
@@ -73,7 +113,6 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, function func(*exec.
 			JSON_MESSAGE: buffer.String(),
 		})
 	}
-
 }
 
 func returnErr(err error, source string, c *gin.Context) {
@@ -195,19 +234,7 @@ func postMount(c *gin.Context) {
 	}
 	var buffer bytes.Buffer
 
-	if msg.Test {
-		log.Println("Test Mode")
-		HandleMountFolders(out, true, DontRun, c, buffer)
-		return
-	}
-
-	if msg.Run {
-		HandleMountFolders(out, msg.PrintOutput, RunJob, c, buffer)
-		return
-	} else {
-		HandleMountFolders(out, msg.PrintOutput, RunJobBackground, c, buffer)
-		return
-	}
+	HandleMountFolders(out, msg.PrintOutput, msg.Test, msg.Run, c, buffer)
 }
 
 func postBackup(c *gin.Context) {
@@ -252,18 +279,8 @@ func postBackup(c *gin.Context) {
 
 	name := msg.Mode + time.Now().Format(time.UnixDate)
 
-	if msg.Test {
-		HandleBackup(cmd, name, true, DontRun, c)
-		return
-	}
+	HandleBackup(cmd, name, msg.PrintOutput, msg.Test, msg.Run, c)
 
-	if msg.Run {
-		HandleBackup(cmd, name, msg.PrintOutput, RunJob, c)
-		return
-	} else {
-		HandleBackup(cmd, name, msg.PrintOutput, RunJobBackground, c)
-		return
-	}
 }
 
 func postToken(c *gin.Context) {
@@ -325,6 +342,48 @@ func postGit(c *gin.Context) {
 		log.Println(ERROR_BINDING, err.Error())
 		return
 	}
+
+	config, err := GetConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	if err != nil || config.Restic == nil {
+		returnErr(err, ERROR_CONFIG, c)
+		return
+	}
+
+	var jobs []Job
+	switch msg.Mode {
+	case "clone":
+		for _, v := range config.Git {
+			job := CreateJobFromFunction(func() error {
+				return GitClone(v.Rep, v.Directory, config.Agent.HomeFolder, v.PersonalToken)
+			}, msg.Mode)
+			jobs = append(jobs, job)
+		}
+
+	case "pull":
+		for _, v := range config.Git {
+			job := CreateJobFromFunction(func() error {
+				return GitPull(v.Rep, v.Directory, config.Agent.HomeFolder, v.PersonalToken)
+			}, msg.Mode)
+			jobs = append(jobs, job)
+		}
+	default:
+		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
+		return
+	}
+
+	for _, job := range jobs {
+		if msg.Run {
+			err = job.RunJob(msg.PrintOutput)
+		} else {
+			err = job.RunJobBackground(msg.PrintOutput)
+		}
+	}
+
+	if err != nil {
+		returnErr(err, ERROR_MODE, c)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 func RunRestServer(address string) (*http.Server, func()) {

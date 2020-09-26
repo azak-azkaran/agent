@@ -31,6 +31,7 @@ type Configuration struct {
 	Agent            *AgentConfig
 	Restic           *ResticConfig
 	Gocrypt          []GocryptConfig
+	Git              []GitConfig
 	VaultConfig      *vault.Config
 	DB               *badger.DB
 	Hostname         string
@@ -239,6 +240,15 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 			return nil, err
 		}
 		config.Gocrypt = append(config.Gocrypt, *gocrypt)
+	}
+
+	gits := strings.Split(config.Agent.Git, ",")
+	for _, name := range gits {
+		git, err := GetGitConfig(vaultConfig, token, name)
+		if err != nil {
+			return nil, err
+		}
+		config.Git = append(config.Git, *git)
 	}
 	return &config, nil
 }

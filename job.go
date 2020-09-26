@@ -15,6 +15,7 @@ type Job struct {
 	Function    func() error
 	Stdout      *bytes.Buffer
 	Stderr      *bytes.Buffer
+	Name        string
 	printOutput bool
 }
 
@@ -25,7 +26,7 @@ func Log(toQueue string, p bool) {
 }
 
 func (job *Job) QueueStatus() {
-	if job.Cmd.Process == nil {
+	if job.Cmd != nil && job.Cmd.Process == nil {
 		log.Println("Process not found")
 		return
 	}
@@ -44,10 +45,26 @@ func (job *Job) QueueStatus() {
 
 }
 
-func AddJob(cmd *exec.Cmd, name string) Job {
+func CreateJobFromFunction(f func() error, name string) Job {
 	if jobmap == nil {
 		jobmap = cmap.New()
 	}
+
+	job := Job{
+		Stdout:   new(bytes.Buffer),
+		Stderr:   new(bytes.Buffer),
+		Function: f,
+		Name:     name,
+	}
+	jobmap.Set(name, job)
+	return job
+}
+
+func CreateJobFromCommand(cmd *exec.Cmd, name string) Job {
+	if jobmap == nil {
+		jobmap = cmap.New()
+	}
+
 	if jobmap.Has(name) {
 		v, ok := jobmap.Get(name)
 		if ok {
@@ -63,6 +80,7 @@ func AddJob(cmd *exec.Cmd, name string) Job {
 		Stdout:   new(bytes.Buffer),
 		Stderr:   new(bytes.Buffer),
 		Function: cmd.Run,
+		Name:     name,
 	}
 
 	cmd.Stdout = job.Stdout
@@ -71,10 +89,9 @@ func AddJob(cmd *exec.Cmd, name string) Job {
 	return job
 }
 
-func RunJob(cmd *exec.Cmd, name string, printOutput bool) error {
-	job := AddJob(cmd, name)
+func (job *Job) RunJob(printOutput bool) error {
 	job.printOutput = printOutput
-	log.Println("Starting job: ", name)
+	log.Println("Starting job: ", job.Name)
 	return job.doJob()
 }
 
@@ -84,10 +101,9 @@ func (job *Job) doJob() error {
 	return err
 }
 
-func RunJobBackground(cmd *exec.Cmd, name string, printOutput bool) error {
+func (job *Job) RunJobBackground(printOutput bool) error {
 	go func() {
-		log.Println("Starting job in background: ", name)
-		job := AddJob(cmd, name)
+		log.Println("Starting job in background: ", job.Name)
 		job.printOutput = printOutput
 		err := job.doJob()
 		if err != nil {
@@ -98,10 +114,15 @@ func RunJobBackground(cmd *exec.Cmd, name string, printOutput bool) error {
 	return nil
 }
 
-func DontRun(cmd *exec.Cmd, name string, printOutput bool) error {
-	job := AddJob(cmd, name)
+func (job *Job) DontRun(printOutput bool) error {
 	job.printOutput = printOutput
-	log.Println("Not Runing: ", job.Cmd)
+
+	if job.Cmd != nil {
+		log.Println("Not Runing: ", job.Cmd)
+	} else {
+		log.Println("Not Runing: ", job.Name)
+	}
+
 	job.QueueStatus()
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -34,6 +33,8 @@ func clear() {
 	if err != nil {
 		fmt.Println("Error cleaning up: ", err.Error())
 	}
+	os.Remove(test_folder)
+	//	os.Remove("./test/.git")
 }
 
 func TestMainGetConfigFromVault(t *testing.T) {
@@ -109,24 +110,6 @@ func TestMainInit(t *testing.T) {
 	assert.Equal(t, AgentConfiguration.TimeBetweenStart, dur)
 	assert.Equal(t, AgentConfiguration.MountAllow, false)
 	assert.Equal(t, AgentConfiguration.MountDuration, MAIN_TEST_MOUNT_DURATION)
-}
-
-func TestMainQueueJobStatus(t *testing.T) {
-	fmt.Println("running: TestMainQueueJobStatus")
-
-	cmd := exec.Command("echo", "hallo")
-
-	err := RunJob(cmd, "test1", true)
-	require.NoError(t, err)
-
-	time.Sleep(1 * time.Second)
-	assert.NotNil(t, jobmap)
-	assert.NotEmpty(t, jobmap)
-	v, ok := jobmap.Get("test1")
-
-	require.True(t, ok)
-	job := v.(Job)
-	assert.NotNil(t, job.Cmd.Process)
 }
 
 func TestMainStart(t *testing.T) {

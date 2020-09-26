@@ -131,8 +131,8 @@ func TestVaultGetGitConfig(t *testing.T) {
 	require.NotNil(t, conf.PersonalToken)
 	require.NotNil(t, conf.Directory)
 	assert.Equal(t, "https://github.com/amix/vimrc.git", conf.Rep)
-	assert.Equal(t, "test", conf.PersonalToken)
-	assert.Equal(t, "~/test/", conf.Directory)
+	assert.Equal(t, "", conf.PersonalToken)
+	assert.Equal(t, "~/test/vimrc", conf.Directory)
 
 }
 

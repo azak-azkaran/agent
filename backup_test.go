@@ -49,7 +49,9 @@ func TestBackupDoBackup(t *testing.T) {
 
 	cmd := InitRepo(env, pwd)
 	require.DirExists(t, test_folder)
-	err = RunJob(cmd, "test", true)
+
+	job := CreateJobFromCommand(cmd, "test")
+	err = job.RunJob(true)
 	assert.NoError(t, err)
 
 	cmd = Backup("~/", env, pwd, test_exclude, 2000, 2000)
@@ -61,7 +63,9 @@ func TestBackupDoBackup(t *testing.T) {
 	assert.Contains(t, cmd.String(), "--limit-download 2000")
 
 	fmt.Println(cmd.String())
-	err = RunJob(cmd, "backup", false)
+
+	job = CreateJobFromCommand(cmd, "backup")
+	err = job.RunJob(false)
 	assert.NoError(t, err)
 	err = IsEmpty(pwd, BACKUP_TEST_FOLDER)
 	assert.NoError(t, err)
@@ -88,22 +92,26 @@ func TestBackupExistsRepo(t *testing.T) {
 
 	cmd := ExistsRepo(env, pwd)
 	assert.Contains(t, cmd.String(), "restic snapshots")
-	err = RunJob(cmd, "test", false)
+	job := CreateJobFromCommand(cmd, "test")
+	err = job.RunJob(false)
 	assert.Error(t, err)
 
 	cmd = InitRepo(env, pwd)
 	require.NoFileExists(t, test_conf)
 
-	err = RunJob(cmd, "test", true)
+	job = CreateJobFromCommand(cmd, "test")
+	err = job.RunJob(true)
 	assert.NoError(t, err)
 
 	cmd = ExistsRepo(env, pwd)
-	err = RunJob(cmd, "test", false)
+
+	job = CreateJobFromCommand(cmd, "test")
+	err = job.RunJob(false)
 	assert.NoError(t, err)
 
 	v, ok := jobmap.Get("test")
 	require.True(t, ok)
-	job := v.(Job)
+	job = v.(Job)
 	fmt.Println(job.Stdout.String())
 }
 
@@ -125,6 +133,8 @@ func TestBackupInitRepo(t *testing.T) {
 	assert.Contains(t, cmd.String(), "restic init")
 
 	require.DirExists(t, test_folder)
-	err = RunJob(cmd, "test", false)
+
+	job := CreateJobFromCommand(cmd, "test")
+	err = job.RunJob(false)
 	assert.NoError(t, err)
 }

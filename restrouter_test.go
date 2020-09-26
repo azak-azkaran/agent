@@ -525,9 +525,11 @@ func TestRestPostGit(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	mountMsg := GitMessage{
+		Mode:        "clone",
 		Token:       "randomtoken",
 		Debug:       true,
 		PrintOutput: true,
+		Run:         true,
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)
@@ -542,7 +544,7 @@ func TestRestPostGit(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	mountMsg.Run = true
+	mountMsg.Mode = "pull"
 	reqBody, err = json.Marshal(mountMsg)
 	require.NoError(t, err)
 
@@ -556,5 +558,4 @@ func TestRestPostGit(t *testing.T) {
 	test_folder := strings.ReplaceAll(GIT_TEST_FOLDER, HOME, pwd)
 
 	assert.DirExists(t, test_folder)
-
 }

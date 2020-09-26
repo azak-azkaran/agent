@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -15,6 +16,8 @@ func GitClone(repo string, dir string, home string, personal string) error {
 
 	dir = strings.ReplaceAll(dir, HOME, home)
 
+	log.Println("Checkout out to Dir: ", dir)
+	log.Println("Checkout out to Repo: ", repo)
 	if personal == "" {
 		r, err = git.PlainClone(dir, false, &git.CloneOptions{
 			URL:      repo,
@@ -43,7 +46,11 @@ func GitClone(repo string, dir string, home string, personal string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Checkout out Ref: ", ref, " at: ", dir)
+	log.Println("Checkout out Ref: ", ref)
 
 	return nil
+}
+
+func GitPull(repo string, dir string, home string, personal string) error {
+	return errors.New("Function not implemented")
 }

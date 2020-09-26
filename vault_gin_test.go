@@ -93,7 +93,7 @@ func createHandler() http.Handler {
 	})
 	r.GET("/v1/gocrypt/data/random-config-path", test_gocrypt)
 	r.GET("/v1/gocrypt/data/gocryptpath", test_gocrypt)
-	r.GET("/v1/git/data/vimrc", test_git)
+	r.GET("/v1/git/data/gitpath", test_git)
 	return r
 }
 
@@ -137,8 +137,8 @@ func test_git(c *gin.Context) {
 	data := make(map[string]interface{})
 
 	data["repo"] = GIT_TEST_REPO
-	data["dir"] = "~/test/"
-	data["personal_token"] = "test"
+	data["dir"] = GIT_TEST_FOLDER
+	data["personal_token"] = ""
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)
 }
