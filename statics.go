@@ -79,6 +79,9 @@ const (
 	GOCRYPT_TEST_FILE      = "/test"
 	GOCRYPT_TEST_FOLDER    = "~/test/tmp"
 
+	GIT_TEST_FOLDER = "~/test/vimrc"
+	GIT_TEST_REPO   = "https://github.com/amix/vimrc.git"
+
 	VAULT_TEST_PASSWORD            = "hallo"
 	VAULT_TEST_TOKEN               = "superrandompasswordtoken"
 	VAULT_TEST_PATH                = "~/test/tmp"
@@ -101,6 +104,7 @@ const (
 	REST_TEST_BACKUP     = "http://localhost:8031/backup"
 	REST_TEST_STATUS     = "http://localhost:8031/status"
 	REST_TEST_MOUNT      = "http://localhost:8031/mount"
+	REST_TEST_GIT        = "http://localhost:8031/git"
 	REST_TEST_UNSEAL     = "http://localhost:8031/unseal"
 	REST_TEST_IS_SEALED  = "http://localhost:8031/is_sealed"
 	REST_TEST_SEAL       = "http://localhost:8031/seal"

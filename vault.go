@@ -12,6 +12,7 @@ import (
 type AgentConfig struct {
 	Gocryptfs  string `mapstructure:"gocryptfs"`
 	Restic     string `mapstructure:"restic"`
+	Git        string `mapstructure:"git"`
 	HomeFolder string `mapstructure:"home"`
 }
 
@@ -33,6 +34,12 @@ type ResticConfig struct {
 	SecretKey   string `mapstructure:"secret_key"`
 	AccessKey   string `mapstructure:"access_key"`
 	Environment []string
+}
+
+type GitConfig struct {
+	Rep           string `mapstructure:"repo"`
+	Directory     string `mapstructure:"dir"`
+	PersonalToken string `mapstructure:"personal_token"`
 }
 
 func Seal(config *vault.Config, token string) error {
@@ -193,5 +200,28 @@ func GetAgentConfig(config *vault.Config, token string, path string) (*AgentConf
 		return nil, err
 	}
 
+	return &conf, nil
+}
+
+func GetGitConfig(config *vault.Config, token string, path string) (*GitConfig, error) {
+	data, err := getDataFromSecret(config, token, "git/data/"+path)
+	if err != nil {
+		return nil, err
+	}
+
+	var conf GitConfig
+	decoderConfig := mapstructure.DecoderConfig{
+		WeaklyTypedInput: true,
+		Result:           &conf,
+	}
+
+	decoder, err := mapstructure.NewDecoder(&decoderConfig)
+	if err != nil {
+		return nil, err
+	}
+	err = decoder.Decode(data)
+	if err != nil {
+		return nil, err
+	}
 	return &conf, nil
 }

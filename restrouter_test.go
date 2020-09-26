@@ -518,3 +518,43 @@ func TestRestBindings(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 }
+
+func TestRestPostGit(t *testing.T) {
+	fmt.Println("running: TestRestPostGit")
+	t.Cleanup(clear)
+	setupRestrouterTest(t)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+	mountMsg := GitMessage{
+		Token:       "randomtoken",
+		Debug:       true,
+		PrintOutput: true,
+	}
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+	log.Println("Agent rest server startet on: ", server.Addr)
+	reqBody, err := json.Marshal(mountMsg)
+	require.NoError(t, err)
+
+	resp, err := http.Post(REST_TEST_GIT,
+		"application/json", bytes.NewBuffer(reqBody))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	mountMsg.Run = true
+	reqBody, err = json.Marshal(mountMsg)
+	require.NoError(t, err)
+
+	resp, err = http.Post(REST_TEST_GIT,
+		"application/json", bytes.NewBuffer(reqBody))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+	test_folder := strings.ReplaceAll(GIT_TEST_FOLDER, HOME, pwd)
+
+	assert.DirExists(t, test_folder)
+
+}

@@ -16,6 +16,7 @@ type TestConfig struct {
 	resticpath  string
 	gocryptpath string
 	configpath  string
+	gitpath     string
 	secret      string
 	config      *vault.Config
 	Duration    string
@@ -36,6 +37,7 @@ func readConfig(t *testing.T) TestConfig {
 		token:       viper.GetString("token"),
 		resticpath:  viper.GetString("resticpath"),
 		gocryptpath: viper.GetString("gocryptpath"),
+		gitpath:     viper.GetString("gitpath"),
 		configpath:  viper.GetString("configpath"),
 		secret:      viper.GetString("secret"),
 		Duration:    viper.GetString("duration"),
@@ -114,6 +116,24 @@ func TestVaultGetAgentConfig(t *testing.T) {
 	conf, err = GetAgentConfig(testconfig.config, testconfig.token, testconfig.configpath)
 	assert.Error(t, err)
 	assert.Nil(t, conf)
+}
+
+func TestVaultGetGitConfig(t *testing.T) {
+	fmt.Println("running: TestVaultGetGitConfig")
+	testconfig := readConfig(t)
+	seal, err := IsSealed(testconfig.config)
+	require.NoError(t, err)
+	assert.False(t, seal, ERROR_VAULT_SEALED)
+
+	conf, err := GetGitConfig(testconfig.config, testconfig.token, testconfig.gitpath)
+	require.NoError(t, err)
+	require.NotNil(t, conf.Rep)
+	require.NotNil(t, conf.PersonalToken)
+	require.NotNil(t, conf.Directory)
+	assert.Equal(t, "https://github.com/amix/vimrc.git", conf.Rep)
+	assert.Equal(t, "test", conf.PersonalToken)
+	assert.Equal(t, "~/test/", conf.Directory)
+
 }
 
 func TestVaultUnseal(t *testing.T) {

@@ -28,15 +28,6 @@ func RemoveContents(dir string) error {
 	return nil
 }
 
-func clear() {
-	pwd, _ := os.Getwd()
-	test_folder := strings.ReplaceAll(BACKUP_TEST_FOLDER, HOME, pwd)
-	err := RemoveContents(test_folder)
-	if err != nil {
-		fmt.Println("Error cleaning up: ", err.Error())
-	}
-}
-
 func TestBackupDoBackup(t *testing.T) {
 	fmt.Println("running: TestBackupDoBackup")
 	clear()

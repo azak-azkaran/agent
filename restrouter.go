@@ -38,6 +38,13 @@ type MountMessage struct {
 	PrintOutput bool   `json:"print"`
 }
 
+type GitMessage struct {
+	Token       string `json:"token" binding:"required"`
+	Run         bool   `json:"run"`
+	Debug       bool   `json:"debug"`
+	PrintOutput bool   `json:"print"`
+}
+
 func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, function func(*exec.Cmd, string, bool) error, c *gin.Context) {
 	if err := function(cmd, name, printOutput); err != nil {
 		log.Println(ERROR_PREFIX + err.Error())
@@ -312,6 +319,14 @@ func postUnsealKey(c *gin.Context) {
 	}
 }
 
+func postGit(c *gin.Context) {
+	var msg GitMessage
+	if err := c.BindJSON(&msg); err != nil {
+		log.Println(ERROR_BINDING, err.Error())
+		return
+	}
+}
+
 func RunRestServer(address string) (*http.Server, func()) {
 	server := &http.Server{
 		Addr:    address,
@@ -342,6 +357,7 @@ func CreateRestHandler() http.Handler {
 	r.POST("/seal", postSeal)
 	r.POST("/mount", postMount)
 	r.POST("/backup", postBackup)
+	r.POST("/git", postGit)
 	r.GET("/is_sealed", getIsSealed)
 	r.GET("/status", getStatus)
 	r.GET("/logs", getLog)
