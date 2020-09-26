@@ -146,14 +146,16 @@ func TestRestHandleSeal(t *testing.T) {
 
 func TestRestPostBackup(t *testing.T) {
 	fmt.Println("running: TestRestPostBackup")
+	t.Cleanup(clear)
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	backupMsg := BackupMessage{
-		Mode:  "backup",
-		Test:  true,
-		Run:   true,
-		Debug: true,
-		Token: "randomtoken",
+		Mode:        "backup",
+		Test:        true,
+		Run:         true,
+		Debug:       true,
+		PrintOutput: true,
+		Token:       "randomtoken",
 	}
 
 	go fun()
@@ -209,8 +211,12 @@ func TestRestPostBackup(t *testing.T) {
 			if strings.Contains(value.Key, backupMsg.Mode) {
 				require.NotNil(t, value.Val)
 				j := value.Val.(Job)
+				pwd, err := os.Getwd()
+				require.NoError(t, err)
 
-				_, err := os.Stat(BACKUP_TEST_CONF_FILE)
+				test_folder := strings.ReplaceAll(BACKUP_TEST_CONF_FILE, HOME, pwd)
+
+				_, err = os.Stat(test_folder)
 				return j.Cmd.Process != nil && err == nil
 			}
 		}
@@ -236,10 +242,6 @@ func TestRestPostBackup(t *testing.T) {
 
 	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
-
-	err = RemoveContents(BACKUP_TEST_FOLDER)
-	assert.NoError(t, err)
-	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 }
 
 func TestRestPostMount(t *testing.T) {
@@ -247,9 +249,10 @@ func TestRestPostMount(t *testing.T) {
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	mountMsg := MountMessage{
-		Test:  true,
-		Token: "randomtoken",
-		Debug: true,
+		Test:        true,
+		Token:       "randomtoken",
+		Debug:       true,
+		PrintOutput: true,
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)
@@ -273,18 +276,24 @@ func TestRestPostMount(t *testing.T) {
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+	test_folder := strings.ReplaceAll(GOCRYPT_TEST_FILE, HOME, pwd)
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Eventually(t, func() bool {
-		_, err := os.Stat(GOCRYPT_TEST_FILE)
+
+		_, err = os.Stat(test_folder)
 		return err == nil
 	}, 2*time.Second, 10*time.Millisecond)
-	require.FileExists(t, GOCRYPT_TEST_FILE)
-	b, err := ioutil.ReadFile(GOCRYPT_TEST_FILE) // just pass the file name
+
+	require.FileExists(t, test_folder)
+	b, err := ioutil.ReadFile(test_folder) // just pass the file name
 	assert.NoError(t, err)
 	assert.Equal(t, "testfile\n", string(b))
 
 	time.Sleep(7 * time.Second)
-	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
+	assert.NoFileExists(t, test_folder)
 
 	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)

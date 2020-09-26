@@ -228,6 +228,9 @@ func TestMainMain(t *testing.T) {
 	sealStatus = true
 	Progress = 0
 
+	home, err := os.Getwd()
+	require.NoError(t, err)
+
 	go main()
 	time.Sleep(1 * time.Second)
 	AgentConfiguration.VaultConfig = testconfig.config
@@ -272,9 +275,8 @@ func TestMainMain(t *testing.T) {
 	stopChan <- syscall.SIGINT
 	time.Sleep(10 * time.Second)
 
-	is, err := IsEmpty("./test/tmp-mount")
+	err = IsEmpty(home, GOCRYPT_TEST_MOUNTPATH)
 	assert.NoError(t, err)
-	assert.True(t, is)
 
 	assert.False(t, sealStatus)
 	err = server.Shutdown(context.Background())
@@ -433,20 +435,18 @@ func checkJobmap() bool {
 }
 
 func checkContents() bool {
-	ok, err := IsEmpty("./test/tmp-mount")
+	home, err := os.Getwd()
 	if err != nil {
 		return false
 	}
 
-	if ok {
-		return false
-	}
-
-	ok, err = IsEmpty(BACKUP_TEST_FOLDER)
+	err = IsEmpty(home, GOCRYPT_TEST_MOUNTPATH)
 	if err != nil {
 		return false
 	}
-	if ok {
+
+	err = IsEmpty(home, BACKUP_TEST_FOLDER)
+	if err != nil {
 		return false
 	}
 

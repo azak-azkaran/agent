@@ -40,6 +40,8 @@ const (
 	MAIN_ERROR_SHUTDOWN   = "Error shutting down: "
 	MAIN_ERROR_IS_DIR     = "Error provided path is a directory"
 
+	HOME = "~"
+
 	ERROR_DATABASE_NOT_FOUND = "Database is not initialized"
 	ERROR_KEY_NOT_FOUND      = "Key is not found: "
 
@@ -68,22 +70,22 @@ const (
 	ERROR_READING_RESPONSE = "Error reading response: "
 	ERROR_TIMESTAMP        = "Error retrieving timestamp: "
 
-	BACKUP_TEST_FOLDER       = "./test/Backup"
-	BACKUP_TEST_EXCLUDE_FILE = "./test/exclude\n./*.go"
-	BACKUP_TEST_CONF_FILE    = "./test/Backup/config"
+	BACKUP_TEST_FOLDER       = "~/test/Backup"
+	BACKUP_TEST_EXCLUDE_FILE = "~/test/exclude\n~/*.go"
+	BACKUP_TEST_CONF_FILE    = "~/test/Backup/config"
 
 	// Mount Constants For Tests
-	GOCRYPT_TEST_MOUNTPATH = "./test/tmp-mount"
-	GOCRYPT_TEST_FILE      = "./test/tmp-mount/test"
-	GOCRYPT_TEST_FOLDER    = "./test/tmp"
+	GOCRYPT_TEST_MOUNTPATH = "~/test/tmp-mount"
+	GOCRYPT_TEST_FILE      = "~/test/tmp-mount/test"
+	GOCRYPT_TEST_FOLDER    = "~/test/tmp"
 
 	VAULT_TEST_PASSWORD            = "hallo"
 	VAULT_TEST_TOKEN               = "superrandompasswordtoken"
-	VAULT_TEST_PATH                = "./test/tmp"
-	VAULT_TEST_MOUNTPATH           = "./test/tmp-mount"
+	VAULT_TEST_PATH                = "~/test/tmp"
+	VAULT_TEST_MOUNTPATH           = "~/test/tmp-mount"
 	VAULT_TEST_CONFIGPATH          = "gocryptpath"
-	VAULT_TEST_BACKUP_PATH         = "./test/Backup"
-	VAULT_TEST_BACKUP_EXCLUDE_FILE = "./test/exclude"
+	VAULT_TEST_BACKUP_PATH         = "~/test/Backup"
+	VAULT_TEST_BACKUP_EXCLUDE_FILE = "~/test/exclude"
 	VAULT_TEST_BACKUP_SECRET_KEY   = "secret.key"
 	VAULT_TEST_BACKUP_ACCESS_KEY   = "access.key"
 

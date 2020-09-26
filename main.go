@@ -140,7 +140,7 @@ func RunJobBackground(cmd *exec.Cmd, name string, printOutput bool) error {
 func DontRun(cmd *exec.Cmd, name string, printOutput bool) error {
 	job := AddJob(cmd, name)
 	job.printOutput = printOutput
-	log.Println("Not Runing: ", job)
+	log.Println("Not Runing: ", job.Cmd)
 	QueueJobStatus(job)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -67,7 +68,7 @@ func createHandler() http.Handler {
 		var msg vault.Secret
 		data := make(map[string]interface{})
 		secret := make(map[string]string)
-		secret["path"] = "./"
+		secret["path"] = "~/"
 		secret["repo"] = VAULT_TEST_BACKUP_PATH
 		secret["pw"] = VAULT_TEST_PASSWORD
 		secret["exclude"] = VAULT_TEST_BACKUP_EXCLUDE_FILE
@@ -116,8 +117,14 @@ func test_config(c *gin.Context) {
 	var msg vault.Secret
 	data := make(map[string]interface{})
 
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+
 	data["restic"] = "resticpath"
 	data["gocryptfs"] = VAULT_TEST_CONFIGPATH
+	data["home"] = pwd
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)
 }

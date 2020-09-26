@@ -7,36 +7,48 @@ import (
 	"strings"
 )
 
-func createCmd(command string, env []string) *exec.Cmd {
+func createCmd(command string, env []string, home string) *exec.Cmd {
 	//https://stackoverflow.com/a/43246464/9447237
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, env...)
+
+	for _, v := range env {
+		if strings.Contains(v, HOME) {
+			cmd.Env = append(cmd.Env, strings.ReplaceAll(v, HOME, home))
+		} else {
+			cmd.Env = append(cmd.Env, v)
+		}
+	}
 	return cmd
 }
 
-func InitRepo(env []string) *exec.Cmd {
-	return createCmd("restic init", env)
+func InitRepo(env []string, home string) *exec.Cmd {
+	return createCmd("restic init", env, home)
 }
 
-func ExistsRepo(env []string) *exec.Cmd {
-	return createCmd("restic snapshots", env)
+func ExistsRepo(env []string, home string) *exec.Cmd {
+	return createCmd("restic snapshots", env, home)
 }
 
-func CheckRepo(env []string) *exec.Cmd {
-	return createCmd("restic check", env)
+func CheckRepo(env []string, home string) *exec.Cmd {
+	return createCmd("restic check", env, home)
 }
 
-func UnlockRepo(env []string) *exec.Cmd {
-	return createCmd("restic unlock", env)
+func UnlockRepo(env []string, home string) *exec.Cmd {
+	return createCmd("restic unlock", env, home)
 }
 
-func PruneRepo(env []string) *exec.Cmd {
-	return createCmd("restic prune", env)
+func PruneRepo(env []string, home string) *exec.Cmd {
+	return createCmd("restic prune", env, home)
 }
 
-func Backup(path string, env []string, exclude string, upload int, download int) *exec.Cmd {
+func Backup(path string, env []string, home string, exclude string, upload int, download int) *exec.Cmd {
 	var bud strings.Builder
+
+	//test_mountpath := strings.ReplaceAll(GOCRYPT_TEST_MOUNTPATH, "~", home)
+	path = strings.ReplaceAll(path, HOME, home)
+	exclude = strings.ReplaceAll(exclude, HOME, home)
+
 	excludes := strings.Split(exclude, "\n")
 
 	bud.WriteString("restic backup ")
@@ -54,5 +66,5 @@ func Backup(path string, env []string, exclude string, upload int, download int)
 	bud.WriteString(strconv.Itoa(download))
 	command := bud.String()
 	//" --quiet "
-	return createCmd(command, env)
+	return createCmd(command, env, home)
 }

@@ -22,26 +22,32 @@ func TestGocryptfsMountGocryptfs(t *testing.T) {
 	fmt.Println("running: TestGocryptfsMountGocryptfs")
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
-	require.DirExists(t, GOCRYPT_TEST_FOLDER)
+	home, err := os.Getwd()
+	require.NoError(t, err)
 
-	_ = os.Mkdir(GOCRYPT_TEST_MOUNTPATH, 0700)
-	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
+	test_folder := strings.ReplaceAll(GOCRYPT_TEST_FOLDER, "~", home)
+	test_mountpath := strings.ReplaceAll(GOCRYPT_TEST_MOUNTPATH, "~", home)
 
-	cmd := MountGocryptfs("./test/tmp", GOCRYPT_TEST_MOUNTPATH, idletime, "hallo", false, false)
+	require.DirExists(t, test_folder)
 
-	assert.Contains(t, cmd.String(), "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
+	_ = os.Mkdir(test_mountpath, 0700)
+	require.DirExists(t, test_mountpath, "Folder creation failed")
+
+	cmd := MountGocryptfs("~/test/tmp", test_mountpath, home, idletime, "hallo", false)
+
+	assert.Contains(t, cmd.String(), "gocryptfs -i 3s", "/test/tmp", "/test/tmp-mount",
 		// clear location of executable
 		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
 
 	err = RunJob(cmd, "test", false)
 	assert.NoError(t, err)
 
-	require.FileExists(t, GOCRYPT_TEST_FILE)
-	b, err := ioutil.ReadFile(GOCRYPT_TEST_FILE) // just pass the file name
+	require.FileExists(t, test_mountpath+GOCRYPT_TEST_FILE)
+	b, err := ioutil.ReadFile(test_mountpath + GOCRYPT_TEST_FILE) // just pass the file name
 	assert.NoError(t, err)
 	assert.Equal(t, "testfile\n", string(b))
 	time.Sleep(4 * time.Second)
-	assert.NoFileExists(t, GOCRYPT_TEST_FILE)
+	assert.NoFileExists(t, test_mountpath+GOCRYPT_TEST_FILE)
 }
 
 func TestGocryptfsMountFolders(t *testing.T) {
@@ -63,8 +69,11 @@ func TestGocryptfsMountFolders(t *testing.T) {
 	var configs []GocryptConfig
 	configs = append(configs, config, config)
 
+	home, err := os.UserHomeDir()
+	require.NoError(t, err)
+
 	testRun = t
-	cmds := MountFolders(configs)
+	cmds := MountFolders(home, configs)
 	assert.NotEmpty(t, cmds)
 	for k, v := range cmds {
 		err = CheckCmd(v, "mount"+strconv.Itoa(k))
@@ -84,26 +93,16 @@ func CheckCmd(cmd *exec.Cmd, v string) error {
 	}
 }
 
-func TestGocryptfsAbsolutePath(t *testing.T) {
-	fmt.Println("running: TestGocryptfsAbsolutePath")
-	dir, err := os.UserHomeDir()
-	assert.NoError(t, err)
-
-	path := AbsolutePath("~/test")
-	assert.True(t, strings.HasPrefix(path, dir))
-	path = AbsolutePath("./test")
-	assert.False(t, strings.HasPrefix(path, dir))
-}
-
 func TestGocryptfsIsEmpty(t *testing.T) {
 	fmt.Println("running: TestGocryptfsIsEmpty")
-	is, err := IsEmpty("./test")
+	home, err := os.Getwd()
+	require.NoError(t, err)
+
+	err = IsEmpty(home, "./test")
 	assert.NoError(t, err)
-	assert.False(t, is)
 
 	_ = os.Mkdir(GOCRYPT_TEST_MOUNTPATH, 0700)
 	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
-	is, err = IsEmpty("./test/tmp-mount")
+	err = IsEmpty(home, "./test/tmp-mount")
 	assert.NoError(t, err)
-	assert.True(t, is)
 }

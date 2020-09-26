@@ -174,11 +174,11 @@ func postMount(c *gin.Context) {
 		return
 	}
 
-	for i, v := range config.Gocrypt {
-		config.Gocrypt[i] = v
-	}
+	//for i, v := range config.Gocrypt {
+	//	config.Gocrypt[i] = v
+	//}
 
-	out := MountFolders(config.Gocrypt)
+	out := MountFolders(config.Agent.HomeFolder, config.Gocrypt)
 
 	if msg.Debug {
 		log.Println("Config", config.Gocrypt)
@@ -219,20 +219,21 @@ func postBackup(c *gin.Context) {
 	var cmd *exec.Cmd
 	switch msg.Mode {
 	case "init":
-		cmd = InitRepo(config.Restic.Environment)
+		cmd = InitRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	case "exist":
-		cmd = ExistsRepo(config.Restic.Environment)
+		cmd = ExistsRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	case "check":
-		cmd = CheckRepo(config.Restic.Environment)
+		cmd = CheckRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	case "backup":
 		cmd = Backup(
 			config.Restic.Path,
 			config.Restic.Environment,
+			config.Agent.HomeFolder,
 			config.Restic.ExcludePath,
 			2000,
 			2000)
 	case "unlock":
-		cmd = UnlockRepo(config.Restic.Environment)
+		cmd = UnlockRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	default:
 		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
 		return
