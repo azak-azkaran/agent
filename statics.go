@@ -76,7 +76,7 @@ const (
 
 	// Mount Constants For Tests
 	GOCRYPT_TEST_MOUNTPATH = "~/test/tmp-mount"
-	GOCRYPT_TEST_FILE      = "~/test/tmp-mount/test"
+	GOCRYPT_TEST_FILE      = "/test"
 	GOCRYPT_TEST_FOLDER    = "~/test/tmp"
 
 	VAULT_TEST_PASSWORD            = "hallo"

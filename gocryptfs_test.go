@@ -54,10 +54,16 @@ func TestGocryptfsMountFolders(t *testing.T) {
 	fmt.Println("running: TestGocryptfsMountFolders")
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
-	require.DirExists(t, GOCRYPT_TEST_FOLDER)
 
-	_ = os.Mkdir(GOCRYPT_TEST_MOUNTPATH, 0700)
-	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
+	home, err := os.Getwd()
+	require.NoError(t, err)
+
+	test_folder := strings.ReplaceAll(GOCRYPT_TEST_FOLDER, "~", home)
+	test_mountpath := strings.ReplaceAll(GOCRYPT_TEST_MOUNTPATH, "~", home)
+	require.DirExists(t, test_folder)
+
+	_ = os.Mkdir(test_mountpath, 0700)
+	require.DirExists(t, test_mountpath, "Folder creation failed")
 
 	config := GocryptConfig{
 		MountPoint:    GOCRYPT_TEST_MOUNTPATH,
@@ -68,9 +74,6 @@ func TestGocryptfsMountFolders(t *testing.T) {
 	}
 	var configs []GocryptConfig
 	configs = append(configs, config, config)
-
-	home, err := os.UserHomeDir()
-	require.NoError(t, err)
 
 	testRun = t
 	cmds := MountFolders(home, configs)
@@ -83,7 +86,7 @@ func TestGocryptfsMountFolders(t *testing.T) {
 
 func CheckCmd(cmd *exec.Cmd, v string) error {
 	count++
-	b := assert.Contains(testRun, cmd.String(), "gocryptfs -i 3s ./test/tmp ./test/tmp-mount",
+	b := assert.Contains(testRun, cmd.String(), "gocryptfs -i 3s ", "/test/tmp ", "/test/tmp-mount",
 		// clear location of executable
 		strings.TrimPrefix(strings.TrimPrefix(cmd.String(), "/usr/local/bin/"), "/usr/bin/"))
 	if b {
@@ -98,11 +101,13 @@ func TestGocryptfsIsEmpty(t *testing.T) {
 	home, err := os.Getwd()
 	require.NoError(t, err)
 
+	test_mountpath := strings.ReplaceAll(GOCRYPT_TEST_MOUNTPATH, "~", home)
+
 	err = IsEmpty(home, "./test")
 	assert.NoError(t, err)
 
-	_ = os.Mkdir(GOCRYPT_TEST_MOUNTPATH, 0700)
-	require.DirExists(t, GOCRYPT_TEST_MOUNTPATH, "Folder creation failed")
-	err = IsEmpty(home, "./test/tmp-mount")
+	_ = os.Mkdir(test_mountpath, 0700)
+	require.DirExists(t, test_mountpath, "Folder creation failed")
+	err = IsEmpty(home, GOCRYPT_TEST_MOUNTPATH)
 	assert.NoError(t, err)
 }

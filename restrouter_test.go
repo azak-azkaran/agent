@@ -146,6 +146,7 @@ func TestRestHandleSeal(t *testing.T) {
 
 func TestRestPostBackup(t *testing.T) {
 	fmt.Println("running: TestRestPostBackup")
+	clear()
 	t.Cleanup(clear)
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
@@ -278,7 +279,7 @@ func TestRestPostMount(t *testing.T) {
 
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
-	test_folder := strings.ReplaceAll(GOCRYPT_TEST_FILE, HOME, pwd)
+	test_folder := strings.ReplaceAll(GOCRYPT_TEST_MOUNTPATH+GOCRYPT_TEST_FILE, HOME, pwd)
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Eventually(t, func() bool {

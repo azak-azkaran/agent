@@ -171,6 +171,7 @@ func TestMainQueueJobStatus(t *testing.T) {
 
 func TestMainStart(t *testing.T) {
 	fmt.Println("running: TestMainStart")
+	t.Cleanup(clear)
 
 	jobmap = cmap.New()
 	gin.SetMode(gin.TestMode)
@@ -202,10 +203,6 @@ func TestMainStart(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
-	err = RemoveContents(BACKUP_TEST_FOLDER)
-	assert.NoError(t, err)
-	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
-
 	AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
 
@@ -217,6 +214,7 @@ func TestMainStart(t *testing.T) {
 
 func TestMainMain(t *testing.T) {
 	fmt.Println("running: TestMainMain")
+	t.Cleanup(clear)
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
 	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
@@ -275,16 +273,14 @@ func TestMainMain(t *testing.T) {
 	stopChan <- syscall.SIGINT
 	time.Sleep(10 * time.Second)
 
-	err = IsEmpty(home, GOCRYPT_TEST_MOUNTPATH)
+	test_mountpath := strings.ReplaceAll(GOCRYPT_TEST_MOUNTPATH, "~", home)
+
+	err = IsEmpty(home, test_mountpath)
 	assert.NoError(t, err)
 
 	assert.False(t, sealStatus)
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
-
-	err = RemoveContents(BACKUP_TEST_FOLDER)
-	assert.NoError(t, err)
-	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 
 	err = RemoveContents("./test/DB/")
 	assert.NoError(t, err)

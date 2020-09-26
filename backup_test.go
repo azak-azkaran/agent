@@ -14,6 +14,7 @@ import (
 const ()
 
 func RemoveContents(dir string) error {
+	fmt.Println("RemoveContents: ", dir)
 	files, err := filepath.Glob(filepath.Join(dir, "*"))
 	if err != nil {
 		return err
@@ -38,6 +39,7 @@ func clear() {
 
 func TestBackupDoBackup(t *testing.T) {
 	fmt.Println("running: TestBackupDoBackup")
+	clear()
 	t.Cleanup(clear)
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
@@ -83,11 +85,15 @@ func TestBackupExistsRepo(t *testing.T) {
 		RESTIC_PASSWORD + "hallo",
 		RESTIC_REPOSITORY + BACKUP_TEST_FOLDER,
 	}
-	err := os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
-	assert.NoError(t, err)
 
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
+
+	test_folder := strings.ReplaceAll(BACKUP_TEST_FOLDER, HOME, pwd)
+	test_conf := strings.ReplaceAll(BACKUP_TEST_CONF_FILE, HOME, pwd)
+
+	err = os.MkdirAll(test_folder, os.ModePerm)
+	assert.NoError(t, err)
 
 	cmd := ExistsRepo(env, pwd)
 	assert.Contains(t, cmd.String(), "restic snapshots")
@@ -95,7 +101,7 @@ func TestBackupExistsRepo(t *testing.T) {
 	assert.Error(t, err)
 
 	cmd = InitRepo(env, pwd)
-	require.NoFileExists(t, BACKUP_TEST_CONF_FILE)
+	require.NoFileExists(t, test_conf)
 
 	err = RunJob(cmd, "test", true)
 	assert.NoError(t, err)
@@ -120,12 +126,14 @@ func TestBackupInitRepo(t *testing.T) {
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
 
-	os.MkdirAll(BACKUP_TEST_FOLDER, os.ModePerm)
+	test_folder := strings.ReplaceAll(BACKUP_TEST_FOLDER, HOME, pwd)
+
+	err = os.MkdirAll(test_folder, os.ModePerm)
 	cmd := InitRepo(env, pwd)
 	require.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 	assert.Contains(t, cmd.String(), "restic init")
 
-	require.DirExists(t, BACKUP_TEST_FOLDER)
+	require.DirExists(t, test_folder)
 	err = RunJob(cmd, "test", false)
 	assert.NoError(t, err)
 }
