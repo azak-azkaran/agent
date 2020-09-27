@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"os"
 	"strings"
@@ -51,6 +50,31 @@ func GitClone(repo string, dir string, home string, personal string) error {
 	return nil
 }
 
-func GitPull(repo string, dir string, home string, personal string) error {
-	return errors.New("Function not implemented")
+func GitPull(dir string, home string) error {
+	path := strings.ReplaceAll(dir, HOME, home)
+	log.Println("Pulling from: ", path)
+	r, err := git.PlainOpen(path)
+	if err != nil {
+		return err
+	}
+
+	// Get the working directory for the repository
+	w, err := r.Worktree()
+	if err != nil {
+		return err
+	}
+
+	// Pull the latest changes from the origin remote and merge into the current branch
+	err = w.Pull(&git.PullOptions{})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		return err
+	}
+
+	// Print the latest commit that was just pulled
+	ref, err := r.Head()
+	if err != nil {
+		return err
+	}
+	log.Println("Checkout out Ref: ", ref)
+	return nil
 }

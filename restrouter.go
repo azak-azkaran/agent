@@ -362,7 +362,7 @@ func postGit(c *gin.Context) {
 	case "pull":
 		for _, v := range config.Git {
 			job := CreateJobFromFunction(func() error {
-				return GitPull(v.Rep, v.Directory, config.Agent.HomeFolder, v.PersonalToken)
+				return GitPull(v.Directory, config.Agent.HomeFolder)
 			}, msg.Mode)
 			jobs = append(jobs, job)
 		}

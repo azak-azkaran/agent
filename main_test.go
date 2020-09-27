@@ -310,9 +310,65 @@ func TestMainSendRequest(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestMainBackupRepositoryExists(t *testing.T) {
+	fmt.Println("running: TestMainBackupRepositoryExists")
+
+	t.Cleanup(clear)
+	jobmap = cmap.New()
+	gin.SetMode(gin.TestMode)
+	testconfig := readConfig(t)
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
+	os.Setenv("AGENT_DURATION", testconfig.Duration)
+	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	err := Init(testconfig.config, os.Args)
+	require.NoError(t, err)
+
+	_, err = Unseal(testconfig.config, testconfig.secret)
+	require.NoError(t, err)
+
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	AgentConfiguration.DB = InitDB("", "", true)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+
+	BackupRepositoryExists(VAULT_TEST_TOKEN)
+
+	assert.Eventually(t, func() bool {
+
+		path := strings.ReplaceAll(BACKUP_TEST_CONF_FILE, HOME, pwd)
+		stat, err := os.Stat(path)
+		if err != nil {
+			return false
+		}
+
+		return !stat.IsDir()
+	},
+		time.Duration(20*time.Second), time.Duration(1*time.Second))
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
+
+	AgentConfiguration.DB.Close()
+	assert.NoError(t, err)
+
+	err = RemoveContents("./test/DB/")
+	assert.NoError(t, err)
+	assert.NoFileExists(t, "./test/DB/MANIFEST")
+	time.Sleep(1 * time.Millisecond)
+
+}
+
 func TestMainCheckBackupRepository(t *testing.T) {
 	fmt.Println("running: TestMainCheckBackupRepository")
-
+	t.Cleanup(clear)
 	jobmap = cmap.New()
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
@@ -350,9 +406,60 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	err = server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
-	err = RemoveContents(BACKUP_TEST_FOLDER)
+	AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
-	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
+
+	err = RemoveContents("./test/DB/")
+	assert.NoError(t, err)
+	assert.NoFileExists(t, "./test/DB/MANIFEST")
+	time.Sleep(1 * time.Millisecond)
+}
+
+func TestMainGitCheckout(t *testing.T) {
+	fmt.Println("Running: TestMainGitCheckout")
+	t.Cleanup(clear)
+	jobmap = cmap.New()
+	gin.SetMode(gin.TestMode)
+	testconfig := readConfig(t)
+	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
+	os.Setenv("AGENT_DURATION", testconfig.Duration)
+	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGNET_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGNET_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	err := Init(testconfig.config, os.Args)
+	require.NoError(t, err)
+
+	_, err = Unseal(testconfig.config, testconfig.secret)
+	require.NoError(t, err)
+
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	AgentConfiguration.DB = InitDB("", "", true)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+
+	GitCheckout()
+
+	assert.Eventually(t, func() bool {
+		path := strings.ReplaceAll(GIT_TEST_FOLDER, HOME, pwd)
+		f, err := os.Open(path)
+		if err != nil {
+			return false
+		}
+		defer f.Close()
+
+		_, err = f.Readdirnames(1) // Or f.Readdir(1)
+		return err == nil
+	},
+		time.Duration(20*time.Second), time.Duration(1*time.Second))
+
+	err = server.Shutdown(context.Background())
+	assert.NoError(t, err)
 
 	AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
@@ -361,6 +468,7 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoFileExists(t, "./test/DB/MANIFEST")
 	time.Sleep(1 * time.Millisecond)
+
 }
 
 func checkJobmap() bool {

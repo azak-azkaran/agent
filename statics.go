@@ -33,6 +33,7 @@ const (
 	MAIN_POST_HTTP            = "http://"
 	MAIN_POST_BACKUP_ENDPOINT = "/backup"
 	MAIN_POST_MOUNT_ENDPOINT  = "/mount"
+	MAIN_POST_GIT_ENDPOINT    = "/git"
 	MAIN_POST_DATA_TYPE       = "application/json"
 
 	MAIN_ERROR_CHECK_SEAL = "Error while checking seal: "

@@ -272,6 +272,7 @@ func checkRequirementsForBackup() (string, bool) {
 	}
 	return token, true
 }
+
 func CheckBackupRepository() {
 	token, ok := checkRequirementsForBackup()
 	if !ok {
@@ -286,7 +287,7 @@ func CheckBackupRepository() {
 	t.Add(12 * time.Hour)
 	now := time.Now()
 	if now.After(t) {
-		checkBackupRepositoryExists(token)
+		BackupRepositoryExists(token)
 		backupMsg := BackupMessage{
 			Mode:        "check",
 			Token:       token,
@@ -346,7 +347,7 @@ func backup() {
 		return
 	}
 
-	checkBackupRepositoryExists(token)
+	BackupRepositoryExists(token)
 	backupMsg := BackupMessage{
 		Mode:        "backup",
 		Token:       token,
@@ -370,7 +371,7 @@ func backup() {
 	}
 }
 
-func checkBackupRepositoryExists(token string) {
+func BackupRepositoryExists(token string) {
 	backupMsg := BackupMessage{
 		Mode:        "exist",
 		Token:       token,
@@ -401,8 +402,37 @@ func checkBackupRepositoryExists(token string) {
 	SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
 }
 
+func GitCheckout() {
+	token, ok := checkRequirementsForBackup()
+	if !ok {
+		return
+	}
+
+	msg := GitMessage{
+		Mode:        "clone",
+		Token:       token,
+		Run:         true,
+		PrintOutput: true,
+	}
+
+	reqBody, err := json.Marshal(msg)
+	if err != nil {
+		log.Println(ERROR_UNMARSHAL, err)
+		return
+	}
+	ok, err = SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
+	if err != nil {
+		return
+	}
+	if ok {
+		return
+	}
+
+}
+
 func Start() {
 	mountFolders()
+	GitCheckout()
 	backup()
 	CheckBackupRepository()
 }
