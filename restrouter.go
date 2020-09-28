@@ -47,7 +47,6 @@ type GitMessage struct {
 }
 
 func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, test bool, run bool, c *gin.Context) {
-
 	job := CreateJobFromCommand(cmd, name)
 	var err error
 	if test {
@@ -278,7 +277,6 @@ func postBackup(c *gin.Context) {
 	}
 
 	name := msg.Mode + time.Now().Format(time.UnixDate)
-
 	HandleBackup(cmd, name, msg.PrintOutput, msg.Test, msg.Run, c)
 
 }

@@ -209,7 +209,7 @@ func TestMainMain(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "randomtoken", token)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	assert.Eventually(t, checkContents, 20*time.Second, 1*time.Second)
 	assert.Eventually(t, checkJobmap, 20*time.Second, 1*time.Second)
 

@@ -208,20 +208,13 @@ func TestRestPostBackup(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 	assert.Eventually(t, func() bool {
-		for value := range jobmap.IterBuffered() {
-			if strings.Contains(value.Key, backupMsg.Mode) {
-				require.NotNil(t, value.Val)
-				j := value.Val.(Job)
-				pwd, err := os.Getwd()
-				require.NoError(t, err)
+		pwd, err := os.Getwd()
+		require.NoError(t, err)
 
-				test_folder := strings.ReplaceAll(BACKUP_TEST_CONF_FILE, HOME, pwd)
+		test_conf := strings.ReplaceAll(BACKUP_TEST_CONF_FILE, HOME, pwd)
 
-				_, err = os.Stat(test_folder)
-				return j.Cmd.Process != nil && err == nil
-			}
-		}
-		return false
+		_, err = os.Stat(test_conf)
+		return err == nil
 	},
 		time.Duration(25*time.Second), time.Duration(1*time.Second))
 
