@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +27,7 @@ type BackupMessage struct {
 	Test        bool   `json:"test"`
 	Debug       bool   `json:"debug"`
 	PrintOutput bool   `json:"print"`
+	DryRun      bool   `json:"dryrun"`
 }
 
 type MountMessage struct {
@@ -67,9 +67,12 @@ func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, test bool, run b
 
 }
 
-func handleError(err error, errMsg string, buffer bytes.Buffer) bool {
+func handleError(job Job, err error, errMsg string, buffer bytes.Buffer) bool {
 	if err != nil {
 		m := ERROR_PREFIX + errMsg + err.Error()
+		if job.Stderr != nil {
+			m = "\t" + job.Stderr.String()
+		}
 		log.Println(m)
 		buffer.WriteString(m)
 		return false
@@ -81,16 +84,16 @@ func HandleMount(job Job, printOutput bool, test bool, run bool, c *gin.Context,
 	var err error
 	if test {
 		err = job.DontRun(printOutput)
-		return handleError(err, ERROR_RUNMOUNT, buffer)
+		return handleError(job, err, ERROR_RUNMOUNT, buffer)
 	} else {
 
 		if run {
 			err = job.RunJob(printOutput)
-			return handleError(err, ERROR_RUNMOUNT, buffer)
+			return handleError(job, err, ERROR_RUNMOUNT, buffer)
 
 		} else {
 			err = job.RunJobBackground(printOutput)
-			return handleError(err, ERROR_RUNMOUNT, buffer)
+			return handleError(job, err, ERROR_RUNMOUNT, buffer)
 		}
 	}
 }
@@ -219,10 +222,6 @@ func postMount(c *gin.Context) {
 		return
 	}
 
-	//for i, v := range config.Gocrypt {
-	//	config.Gocrypt[i] = v
-	//}
-
 	out := MountFolders(config.Agent.HomeFolder, config.Gocrypt)
 
 	if msg.Debug {
@@ -267,6 +266,12 @@ func postBackup(c *gin.Context) {
 			2000)
 	case "unlock":
 		cmd = UnlockRepo(config.Restic.Environment, config.Agent.HomeFolder)
+	case "list":
+		cmd = ListRepo(config.Restic.Environment, config.Agent.HomeFolder)
+	case "prune":
+		cmd = PruneRepo(config.Restic.Environment, config.Agent.HomeFolder)
+	case "forget":
+		cmd = ForgetRep(config.Restic.Environment, config.Agent.HomeFolder)
 	default:
 		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
 		return
@@ -276,8 +281,7 @@ func postBackup(c *gin.Context) {
 		log.Println("Config", config.Restic)
 	}
 
-	name := msg.Mode + time.Now().Format(time.UnixDate)
-	HandleBackup(cmd, name, msg.PrintOutput, msg.Test, msg.Run, c)
+	HandleBackup(cmd, msg.Mode, msg.PrintOutput, msg.Test, msg.Run, c)
 
 }
 
@@ -365,7 +369,7 @@ func postGit(c *gin.Context) {
 			jobs = append(jobs, job)
 		}
 	default:
-		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
+		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_GIT, c)
 		return
 	}
 
@@ -378,7 +382,7 @@ func postGit(c *gin.Context) {
 	}
 
 	if err != nil {
-		returnErr(err, ERROR_MODE, c)
+		returnErr(err, ERROR_GIT, c)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{})

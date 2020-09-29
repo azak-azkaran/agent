@@ -8,9 +8,10 @@ const (
 	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
 
 	// Store Constants
-	STORE_TOKEN     = "token"
-	STORE_TIMESTAMP = "timestamp"
-	STORE_KEY       = "vault-key-"
+	STORE_TOKEN       = "token"
+	STORE_TIMESTAMP   = "timestamp"
+	STORE_LAST_BACKUP = "last_backup"
+	STORE_KEY         = "vault-key-"
 
 	STORE_ERROR_NOT_DROPED = "Error keys were not dropped."
 
@@ -44,10 +45,12 @@ const (
 	HOME = "~"
 
 	ERROR_DATABASE_NOT_FOUND = "Database is not initialized"
+	ERROR_DATABASE_CLOSED    = "Database is closed"
 	ERROR_KEY_NOT_FOUND      = "Key is not found: "
 
 	// Restrouter
 	ERROR_MODE         = "Backup Mode:"
+	ERROR_GIT          = "GIT Mode:"
 	ERROR_STATUS       = "GetStatus:"
 	ERROR_LOG          = "GetLogs:"
 	ERROR_ISSEALED     = "IsSealed:"

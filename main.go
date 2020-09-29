@@ -283,9 +283,11 @@ func CheckBackupRepository() {
 	if err != nil {
 		log.Println(ERROR_TIMESTAMP, err)
 	}
+	log.Println("Last Backup Check: ", t.String())
 
-	t.Add(12 * time.Hour)
+	t = t.Add(12 * time.Hour)
 	now := time.Now()
+	log.Println("Next Backup Check after: ", t.String())
 	if now.After(t) {
 		BackupRepositoryExists(token)
 		backupMsg := BackupMessage{
@@ -306,7 +308,10 @@ func CheckBackupRepository() {
 			return
 		}
 		if ok {
-			UpdateTimestamp(AgentConfiguration.DB, now)
+			_, err = UpdateTimestamp(AgentConfiguration.DB, time.Now())
+			if err != nil {
+				log.Println(err)
+			}
 			return
 		}
 	} else {
@@ -347,27 +352,40 @@ func backup() {
 		return
 	}
 
-	BackupRepositoryExists(token)
-	backupMsg := BackupMessage{
-		Mode:        "backup",
-		Token:       token,
-		PrintOutput: true,
-		Run:         true,
-	}
-
-	reqBody, err := json.Marshal(backupMsg)
+	t, err := GetLastBackup(AgentConfiguration.DB)
 	if err != nil {
-		log.Println(ERROR_UNMARSHAL, err)
-		return
+		log.Println(ERROR_TIMESTAMP, err)
 	}
+	log.Println("Last Backup: ", t.String())
 
-	ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
-	if err != nil {
-		return
-	}
-	if ok {
-		log.Println(MAIN_MESSAGE_BACKUP_SUCCESS)
-		return
+	t = t.Add(2 * time.Hour)
+	now := time.Now()
+	log.Println("Next Backup after: ", t.String())
+	if now.After(t) {
+		BackupRepositoryExists(token)
+		backupMsg := BackupMessage{
+			Mode:        "backup",
+			Token:       token,
+			PrintOutput: true,
+			Run:         true,
+		}
+
+		reqBody, err := json.Marshal(backupMsg)
+		if err != nil {
+			log.Println(ERROR_UNMARSHAL, err)
+			return
+		}
+
+		ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+		if err != nil {
+			return
+		}
+		if ok {
+			log.Println(MAIN_MESSAGE_BACKUP_SUCCESS)
+			UpdateLastBackup(AgentConfiguration.DB, time.Now())
+			return
+		}
+
 	}
 }
 
@@ -399,7 +417,15 @@ func BackupRepositoryExists(token string) {
 		log.Println(ERROR_UNMARSHAL, err)
 		return
 	}
-	SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+
+	ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if ok {
+		return
+	}
 }
 
 func GitCheckout() {
@@ -420,21 +446,35 @@ func GitCheckout() {
 		log.Println(ERROR_UNMARSHAL, err)
 		return
 	}
+
 	ok, err = SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
 	if err != nil {
+		log.Println("Error:", err)
 		return
 	}
 	if ok {
 		return
+	} else {
+		msg.Mode = "pull"
+		reqBody, err := json.Marshal(msg)
+		if err != nil {
+			log.Println(ERROR_UNMARSHAL, err)
+			return
+		}
+
+		SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
 	}
 
 }
 
 func Start() {
+	log.Println("Waking from Sleep")
 	mountFolders()
 	GitCheckout()
 	backup()
 	CheckBackupRepository()
+
+	log.Println("Going to Sleep")
 }
 
 func unsealVault(seal *vault.SealStatusResponse) {
@@ -501,7 +541,7 @@ func main() {
 		}
 
 		if AgentConfiguration.DB != nil {
-			AgentConfiguration.DB.Close()
+			Close(AgentConfiguration.DB, 5*time.Millisecond)
 		}
 
 		err := restServerAgent.Shutdown(context.Background())

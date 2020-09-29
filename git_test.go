@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,6 +22,11 @@ func TestGitClone(t *testing.T) {
 	err = GitClone(GIT_TEST_REPO, GIT_TEST_FOLDER, pwd, "")
 	assert.NoError(t, err)
 	assert.DirExists(t, test_folder)
+
+	// Second Clone for test if repo exists error is ignored
+	err = GitClone(GIT_TEST_REPO, GIT_TEST_FOLDER, pwd, "")
+	require.Error(t, err)
+	assert.EqualError(t, err, git.ErrRepositoryAlreadyExists.Error())
 }
 
 func TestGitPull(t *testing.T) {

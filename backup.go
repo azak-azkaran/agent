@@ -42,6 +42,14 @@ func PruneRepo(env []string, home string) *exec.Cmd {
 	return createCmd("restic prune", env, home)
 }
 
+func ListRepo(env []string, home string) *exec.Cmd {
+	return createCmd("restic snapshots -g 'full-home'", env, home)
+}
+
+func ForgetRep(env []string, home string) *exec.Cmd {
+	return createCmd("restic forget --prune --keep-daily 7 --keep-monthly 12 --keep-yearly 3", env, home)
+}
+
 func Backup(path string, env []string, home string, exclude string, upload int, download int) *exec.Cmd {
 	var bud strings.Builder
 

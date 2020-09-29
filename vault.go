@@ -111,6 +111,7 @@ func GetSecret(config *vault.Config, token string, path string) (*vault.Secret, 
 }
 
 func getDataFromSecret(config *vault.Config, token string, path string) (map[string]interface{}, error) {
+	//log.Println("Getting Data from: ", path)
 	secret, err := GetSecret(config, token, path)
 	if err != nil {
 		return nil, err

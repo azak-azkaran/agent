@@ -128,6 +128,7 @@ func TestBackupInitRepo(t *testing.T) {
 	test_folder := strings.ReplaceAll(BACKUP_TEST_FOLDER, HOME, pwd)
 
 	err = os.MkdirAll(test_folder, os.ModePerm)
+	require.NoError(t, err)
 	cmd := InitRepo(env, pwd)
 	require.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 	assert.Contains(t, cmd.String(), "restic init")
