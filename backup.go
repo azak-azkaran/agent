@@ -43,7 +43,7 @@ func PruneRepo(env []string, home string) *exec.Cmd {
 }
 
 func ListRepo(env []string, home string) *exec.Cmd {
-	return createCmd("restic snapshots -g 'full-home'", env, home)
+	return createCmd("restic snapshots", env, home)
 }
 
 func ForgetRep(env []string, home string) *exec.Cmd {
