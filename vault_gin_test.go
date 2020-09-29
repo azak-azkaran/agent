@@ -94,6 +94,7 @@ func createHandler() http.Handler {
 	r.GET("/v1/gocrypt/data/random-config-path", test_gocrypt)
 	r.GET("/v1/gocrypt/data/gocryptpath", test_gocrypt)
 	r.GET("/v1/git/data/gitpath", test_git)
+	r.GET("/v1/git/data/vimrc", test_vimrc)
 	return r
 }
 
@@ -125,8 +126,20 @@ func test_config(c *gin.Context) {
 
 	data["restic"] = "resticpath"
 	data["gocryptfs"] = VAULT_TEST_CONFIGPATH
-	data["git"] = "gitpath"
+	data["git"] = "gitpath,vimrc"
 	data["home"] = pwd
+	msg.Data = data
+	c.JSON(http.StatusOK, msg)
+}
+
+func test_vimrc(c *gin.Context) {
+	log.Println("MOCK-Server: called git")
+	var msg vault.Secret
+	data := make(map[string]interface{})
+
+	data["repo"] = GIT_TEST_REPO_VIMRC
+	data["dir"] = GIT_TEST_FOLDER_VIMRC
+	data["personal_token"] = ""
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)
 }

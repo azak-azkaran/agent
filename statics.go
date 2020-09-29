@@ -83,8 +83,10 @@ const (
 	GOCRYPT_TEST_FILE      = "/test"
 	GOCRYPT_TEST_FOLDER    = "~/test/tmp"
 
-	GIT_TEST_FOLDER = "~/test/vimrc"
-	GIT_TEST_REPO   = "https://github.com/amix/vimrc.git"
+	GIT_TEST_FOLDER       = "~/test/reverse"
+	GIT_TEST_REPO         = "https://github.com/azak-azkaran/reverse-link"
+	GIT_TEST_FOLDER_VIMRC = "~/test/vimrc"
+	GIT_TEST_REPO_VIMRC   = "https://github.com/amix/vimrc.git"
 
 	VAULT_TEST_PASSWORD            = "hallo"
 	VAULT_TEST_TOKEN               = "superrandompasswordtoken"

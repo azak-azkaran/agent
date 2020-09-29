@@ -40,6 +40,7 @@ type GitConfig struct {
 	Rep           string `mapstructure:"repo"`
 	Directory     string `mapstructure:"dir"`
 	PersonalToken string `mapstructure:"personal_token"`
+	Name          string
 }
 
 func Seal(config *vault.Config, token string) error {
@@ -224,5 +225,7 @@ func GetGitConfig(config *vault.Config, token string, path string) (*GitConfig, 
 	if err != nil {
 		return nil, err
 	}
+
+	conf.Name = path
 	return &conf, nil
 }

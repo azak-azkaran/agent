@@ -117,6 +117,14 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool,
 	}
 }
 
+func handleClone(gits []GitConfig, home string, printOutput bool, run bool, c *gin.Context) {
+
+}
+
+func handlePull(gits []GitConfig, home string, printOutput bool, run bool, c *gin.Context) {
+
+}
+
 func returnErr(err error, source string, c *gin.Context) {
 	log.Println(ERROR_PREFIX+source, err.Error())
 	c.JSON(http.StatusInternalServerError, gin.H{
@@ -351,41 +359,48 @@ func postGit(c *gin.Context) {
 		return
 	}
 
-	var jobs []Job
-	switch msg.Mode {
-	case "clone":
-		for _, v := range config.Git {
-			job := CreateJobFromFunction(func() error {
+	var buffer bytes.Buffer
+	ok := true
+	for _, v := range config.Git {
+
+		var job Job
+		switch msg.Mode {
+		case "clone":
+			job = CreateJobFromFunction(func() error {
 				return GitClone(v.Rep, v.Directory, config.Agent.HomeFolder, v.PersonalToken)
-			}, msg.Mode)
-			jobs = append(jobs, job)
-		}
-
-	case "pull":
-		for _, v := range config.Git {
-			job := CreateJobFromFunction(func() error {
+			}, msg.Mode+v.Name)
+		case "pull":
+			job = CreateJobFromFunction(func() error {
 				return GitPull(v.Directory, config.Agent.HomeFolder)
-			}, msg.Mode)
-			jobs = append(jobs, job)
+			}, msg.Mode+v.Name)
+		default:
+			returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_GIT, c)
+			return
 		}
-	default:
-		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_GIT, c)
-		return
-	}
 
-	for _, job := range jobs {
+		var err error
+
 		if msg.Run {
 			err = job.RunJob(msg.PrintOutput)
 		} else {
 			err = job.RunJobBackground(msg.PrintOutput)
 		}
+
+		if err != nil {
+			ok = false
+			buffer.WriteString(err.Error())
+		}
 	}
 
-	if err != nil {
-		returnErr(err, ERROR_GIT, c)
-		return
+	if ok {
+		c.JSON(http.StatusOK, gin.H{
+			JSON_MESSAGE: buffer.String(),
+		})
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			JSON_MESSAGE: buffer.String(),
+		})
 	}
-	c.JSON(http.StatusOK, gin.H{})
 }
 
 func RunRestServer(address string) (*http.Server, func()) {

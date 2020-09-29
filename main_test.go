@@ -34,7 +34,14 @@ func clear() {
 		fmt.Println("Error cleaning up: ", err.Error())
 	}
 	os.Remove(test_folder)
-	//	os.Remove("./test/.git")
+
+	test_folder = strings.ReplaceAll(GIT_TEST_FOLDER_VIMRC, HOME, pwd)
+	err = RemoveContents(test_folder)
+	if err != nil {
+		fmt.Println("Error cleaning up: ", err.Error())
+	}
+	os.Remove(test_folder)
+
 }
 
 func TestMainGetConfigFromVault(t *testing.T) {
