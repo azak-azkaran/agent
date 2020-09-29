@@ -117,14 +117,6 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool,
 	}
 }
 
-func handleClone(gits []GitConfig, home string, printOutput bool, run bool, c *gin.Context) {
-
-}
-
-func handlePull(gits []GitConfig, home string, printOutput bool, run bool, c *gin.Context) {
-
-}
-
 func returnErr(err error, source string, c *gin.Context) {
 	log.Println(ERROR_PREFIX+source, err.Error())
 	c.JSON(http.StatusInternalServerError, gin.H{
