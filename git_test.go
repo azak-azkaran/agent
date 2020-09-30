@@ -24,7 +24,7 @@ func TestGitClone(t *testing.T) {
 	assert.DirExists(t, test_folder)
 
 	// Second Clone for test if repo exists error is ignored
-	err = GitClone(GIT_TEST_REPO, GIT_TEST_FOLDER, pwd, "")
+	err = GitClone(GIT_TEST_REPO, GIT_TEST_FOLDER, pwd, "test")
 	require.Error(t, err)
 	assert.EqualError(t, err, git.ErrRepositoryAlreadyExists.Error())
 }
