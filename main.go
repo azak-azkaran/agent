@@ -232,8 +232,8 @@ func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config
 		return nil, err
 	}
 	config.Restic = restic
-	crypts := strings.Split(config.Agent.Gocryptfs, ",")
 
+	crypts := strings.Split(config.Agent.Gocryptfs, ",")
 	for _, name := range crypts {
 		gocrypt, err := GetGocryptConfig(vaultConfig, token, name)
 		if err != nil {
@@ -569,7 +569,7 @@ func main() {
 	restServerAgent, fun = RunRestServer(AgentConfiguration.Address)
 
 	go func() {
-		log.Println(MAIN_MESSAGE_START_RUNNING)
+		log.Println(MAIN_MESSAGE_START_RUNNING, "\t", AgentConfiguration.Hostname)
 		AgentConfiguration.Timer = time.AfterFunc(5*time.Second, run)
 	}()
 
