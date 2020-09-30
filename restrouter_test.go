@@ -111,7 +111,11 @@ func TestRestPostBackup(t *testing.T) {
 	t.Cleanup(clear)
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	backupMsg := BackupMessage{
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+
+	msg := BackupMessage{
 		Mode:        "backup",
 		Test:        true,
 		Run:         true,
@@ -119,78 +123,30 @@ func TestRestPostBackup(t *testing.T) {
 		PrintOutput: true,
 		Token:       "randomtoken",
 	}
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 
-	go fun()
+	msg.Mode = "init"
+	msg.Test = false
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
+
+	msg.Mode = "exist"
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 	time.Sleep(1 * time.Millisecond)
-	log.Println("Agent rest server startet on: ", server.Addr)
 
-	reqBody, err := json.Marshal(backupMsg)
-	require.NoError(t, err)
+	msg.Mode = "backup"
+	msg.Run = false
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 
-	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	defer resp.Body.Close()
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	msg.Mode = "check"
+	msg.Run = true
+	sendingPost(t, REST_TEST_BACKUP, http.StatusInternalServerError, msg)
 
-	backupMsg.Mode = "init"
-	backupMsg.Test = false
-	reqBody, err = json.Marshal(backupMsg)
-	require.NoError(t, err)
-	fmt.Println("Sending Body:", string(reqBody))
+	msg.Mode = "unlock"
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 
-	resp, err = http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	msg.Mode = "list"
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 
-	backupMsg.Mode = "exist"
-	reqBody, err = json.Marshal(backupMsg)
-	require.NoError(t, err)
-
-	resp, err = http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	time.Sleep(1 * time.Millisecond)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	backupMsg.Mode = "backup"
-	backupMsg.Run = false
-	reqBody, err = json.Marshal(backupMsg)
-	require.NoError(t, err)
-
-	resp, err = http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	backupMsg.Mode = "check"
-	backupMsg.Run = true
-	reqBody, err = json.Marshal(backupMsg)
-	require.NoError(t, err)
-	resp, err = http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-
-	backupMsg.Mode = "unlock"
-	reqBody, err = json.Marshal(backupMsg)
-	require.NoError(t, err)
-	resp, err = http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	backupMsg.Mode = "unlock"
-	reqBody, err = json.Marshal(backupMsg)
-	require.NoError(t, err)
-	resp, err = http.Post(REST_TEST_BACKUP,
-		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	time.Sleep(1 * time.Millisecond)
 	assert.Eventually(t, func() bool {
 		pwd, err := os.Getwd()
 		require.NoError(t, err)
@@ -204,7 +160,7 @@ func TestRestPostBackup(t *testing.T) {
 
 	var v interface{}
 	for value := range jobmap.IterBuffered() {
-		if strings.Contains(value.Key, backupMsg.Mode) {
+		if strings.Contains(value.Key, msg.Mode) {
 			v = value.Val
 			break
 		}
@@ -215,7 +171,7 @@ func TestRestPostBackup(t *testing.T) {
 
 	fmt.Println(cmd.Stdout.String())
 
-	err = server.Shutdown(context.Background())
+	err := server.Shutdown(context.Background())
 	assert.NoError(t, err)
 
 	err = AgentConfiguration.DB.Close()
