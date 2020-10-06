@@ -7,9 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
-	"github.com/dgraph-io/badger/v2"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -26,116 +24,6 @@ import (
 var AgentConfiguration Configuration
 var stopChan = make(chan os.Signal, 2)
 var restServerAgent *http.Server
-
-type Configuration struct {
-	Agent            *AgentConfig
-	Restic           *ResticConfig
-	Gocrypt          []GocryptConfig
-	Git              []GitConfig
-	VaultConfig      *vault.Config
-	DB               *badger.DB
-	Hostname         string
-	Address          string
-	Token            string
-	PathDB           string
-	TimeBetweenStart time.Duration
-	Timer            *time.Timer
-	MountAllow       bool
-	MountDuration    string
-	VaultKeyFile     string
-}
-
-func bindEnviorment() error {
-	viper.SetEnvPrefix("agent")
-	err := viper.BindEnv(MAIN_ADDRESS)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_PATHDB)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_TIME_DURATION)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_MOUNT_DURATION)
-	if err != nil {
-		return err
-	}
-	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_VAULT_KEY_FILE)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func parseConfiguration(confi *Configuration) {
-	if viper.IsSet(MAIN_ADDRESS) {
-		confi.Address = viper.GetString(MAIN_ADDRESS)
-	} else {
-		confi.Address = "localhost:8081"
-	}
-
-	if viper.IsSet(MAIN_PATHDB) {
-		confi.PathDB = viper.GetString(MAIN_PATHDB)
-	} else {
-		confi.PathDB = "/opt/agent/db"
-	}
-
-	if viper.IsSet(MAIN_TIME_DURATION) {
-		dur, err := time.ParseDuration(viper.GetString(MAIN_TIME_DURATION))
-		if err != nil {
-			log.Println("Error parsing duration: ", err)
-			dur = 30 * time.Minute
-		}
-		confi.TimeBetweenStart = dur
-	} else {
-		confi.TimeBetweenStart = 30 * time.Minute
-	}
-
-	if viper.IsSet(MAIN_MOUNT_DURATION) {
-		confi.MountDuration = viper.GetString(MAIN_MOUNT_DURATION)
-	} else {
-		confi.MountDuration = ""
-	}
-
-	if viper.IsSet(MAIN_MOUNT_ALLOW) {
-		confi.MountAllow = viper.GetBool(MAIN_MOUNT_ALLOW)
-	} else {
-		confi.MountAllow = false
-	}
-
-	if viper.IsSet(MAIN_VAULT_KEY_FILE) {
-		confi.VaultKeyFile = viper.GetString(MAIN_VAULT_KEY_FILE)
-	} else {
-		confi.VaultKeyFile = ""
-	}
-
-	if viper.IsSet(MAIN_VAULT_ADDRESS) {
-		confi.VaultConfig.Address = viper.GetString(MAIN_VAULT_ADDRESS)
-	}
-
-	log.Println("Agent initalzing on: ", confi.Hostname)
-	log.Println("Agent Configuration:",
-		"\nAddress: ", confi.Address,
-		"\nPath to DB:", confi.PathDB,
-		"\nTime Between Backup Runs: ", confi.TimeBetweenStart,
-		"\nVault Address: ", confi.VaultConfig.Address,
-		"\nVault KeyFile path: ", confi.VaultKeyFile,
-		"\nMount Duration: ", confi.MountDuration,
-		"\nMount AllowOther: ", confi.MountAllow,
-	)
-}
 
 func Init(vaultConfig *vault.Config, args []string) error {
 	jobmap = cmap.New()
@@ -210,47 +98,6 @@ func CheckKeyFile(path string) error {
 	}
 	return nil
 	//return errors.New("Not implemented yet")
-}
-
-func GetConfigFromVault(token string, hostname string, vaultConfig *vault.Config) (*Configuration, error) {
-	resp, err := IsSealed(vaultConfig)
-	if err != nil {
-		return nil, err
-	}
-	if resp {
-		return nil, errors.New(ERROR_VAULT_SEALED)
-	}
-
-	var config Configuration
-	agent, err := GetAgentConfig(vaultConfig, token, hostname)
-	if err != nil {
-		return nil, err
-	}
-	config.Agent = agent
-	restic, err := GetResticConfig(vaultConfig, token, config.Agent.Restic)
-	if err != nil {
-		return nil, err
-	}
-	config.Restic = restic
-
-	crypts := strings.Split(config.Agent.Gocryptfs, ",")
-	for _, name := range crypts {
-		gocrypt, err := GetGocryptConfig(vaultConfig, token, name)
-		if err != nil {
-			return nil, err
-		}
-		config.Gocrypt = append(config.Gocrypt, *gocrypt)
-	}
-
-	gits := strings.Split(config.Agent.Git, ",")
-	for _, name := range gits {
-		git, err := GetGitConfig(vaultConfig, token, name)
-		if err != nil {
-			return nil, err
-		}
-		config.Git = append(config.Git, *git)
-	}
-	return &config, nil
 }
 
 func checkRequirementsForBackup() (string, bool) {
@@ -412,6 +259,7 @@ func BackupRepositoryExists(token string) {
 
 	log.Println(MAIN_MESSAGE_BACKUP_INIT)
 	backupMsg.Mode = "init"
+	backupMsg.PrintOutput = true
 	reqBody, err = json.Marshal(backupMsg)
 	if err != nil {
 		log.Println(ERROR_UNMARSHAL, err)

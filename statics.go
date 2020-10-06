@@ -66,8 +66,9 @@ const (
 	ERROR_PUT_SEAL_KEY = "PutSealKey:"
 	JSON_MESSAGE       = "message"
 
-	ERROR_VAULT_SEALED    = "Vault is sealed."
-	ERROR_VAULT_NO_SECRET = "Vault has no data for this endpoint."
+	ERROR_VAULT_SEALED         = "Vault is sealed."
+	ERROR_VAULT_NO_SECRET      = "Vault has no data for this endpoint."
+	ERROR_VAULT_CONFIG_MISSING = "Vault config is missing"
 
 	ERROR_UNMARSHAL        = "Error marshaling message: "
 	ERROR_SENDING_REQUEST  = "Error sending request: "

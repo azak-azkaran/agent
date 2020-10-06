@@ -2,46 +2,10 @@ package main
 
 import (
 	"errors"
-	"github.com/mitchellh/mapstructure"
 	"log"
-	"time"
 
 	vault "github.com/hashicorp/vault/api"
 )
-
-type AgentConfig struct {
-	Gocryptfs  string `mapstructure:"gocryptfs"`
-	Restic     string `mapstructure:"restic"`
-	Git        string `mapstructure:"git"`
-	HomeFolder string `mapstructure:"home"`
-}
-
-type GocryptConfig struct {
-	MountPoint    string `mapstructure:"mount-path"`
-	Path          string `mapstructure:"path"`
-	Password      string `mapstructure:"pw"`
-	AllowOther    bool   `mapstructure:"allow"`
-	NotEmpty      bool   `mapstructure:"notempty"`
-	Duration      string `mapstructure:"duration"`
-	MountDuration time.Duration
-}
-
-type ResticConfig struct {
-	Password    string `mapstructure:"pw"`
-	Path        string `mapstructure:"path"`
-	Repo        string `mapstructure:"repo"`
-	ExcludePath string `mapstructure:"exclude"`
-	SecretKey   string `mapstructure:"secret_key"`
-	AccessKey   string `mapstructure:"access_key"`
-	Environment []string
-}
-
-type GitConfig struct {
-	Rep           string `mapstructure:"repo"`
-	Directory     string `mapstructure:"dir"`
-	PersonalToken string `mapstructure:"personal_token"`
-	Name          string
-}
 
 func Seal(config *vault.Config, token string) error {
 	client, err := vault.NewClient(config)
@@ -131,101 +95,4 @@ func getDataFromSecret(config *vault.Config, token string, path string) (map[str
 	} else {
 		return secret.Data, nil
 	}
-}
-
-func GetResticConfig(config *vault.Config, token string, path string) (*ResticConfig, error) {
-	data, err := getDataFromSecret(config, token, "restic/data/"+path)
-	if err != nil {
-		return nil, err
-	}
-
-	var conf ResticConfig
-	err = mapstructure.Decode(data, &conf)
-	if err != nil {
-		return nil, err
-	}
-	conf.Environment = []string{
-		RESTIC_ACCESS_KEY + conf.AccessKey,
-		RESTIC_SECRET_KEY + conf.SecretKey,
-		RESTIC_REPOSITORY + conf.Repo,
-		RESTIC_PASSWORD + conf.Password,
-	}
-
-	if data["exclude"] != nil {
-		conf.ExcludePath = data["exclude"].(string)
-	}
-	return &conf, nil
-}
-
-func GetGocryptConfig(config *vault.Config, token string, path string) (*GocryptConfig, error) {
-	data, err := getDataFromSecret(config, token, "gocrypt/data/"+path)
-	if err != nil {
-		return nil, err
-	}
-
-	var conf GocryptConfig
-	decoderConfig := mapstructure.DecoderConfig{
-		WeaklyTypedInput: true,
-		Result:           &conf,
-	}
-
-	decoder, err := mapstructure.NewDecoder(&decoderConfig)
-	if err != nil {
-		return nil, err
-	}
-	err = decoder.Decode(data)
-	if err != nil {
-		return nil, err
-	}
-
-	if conf.Duration == "" {
-		conf.MountDuration, err = time.ParseDuration("0s")
-	} else {
-
-		conf.MountDuration, err = time.ParseDuration(conf.Duration)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &conf, nil
-}
-
-func GetAgentConfig(config *vault.Config, token string, path string) (*AgentConfig, error) {
-	data, err := getDataFromSecret(config, token, "config/"+path)
-	if err != nil {
-		return nil, err
-	}
-
-	var conf AgentConfig
-	err = mapstructure.Decode(data, &conf)
-	if err != nil {
-		return nil, err
-	}
-
-	return &conf, nil
-}
-
-func GetGitConfig(config *vault.Config, token string, path string) (*GitConfig, error) {
-	data, err := getDataFromSecret(config, token, "git/data/"+path)
-	if err != nil {
-		return nil, err
-	}
-
-	var conf GitConfig
-	decoderConfig := mapstructure.DecoderConfig{
-		WeaklyTypedInput: true,
-		Result:           &conf,
-	}
-
-	decoder, err := mapstructure.NewDecoder(&decoderConfig)
-	if err != nil {
-		return nil, err
-	}
-	err = decoder.Decode(data)
-	if err != nil {
-		return nil, err
-	}
-
-	conf.Name = path
-	return &conf, nil
 }

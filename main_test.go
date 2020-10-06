@@ -44,34 +44,6 @@ func clear() {
 
 }
 
-func TestMainGetConfigFromVault(t *testing.T) {
-	fmt.Println("running: TestMainGetConfigFromVault")
-	testconfig := readConfig(t)
-	setupRestrouterTest(t)
-	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-
-	go fun()
-	time.Sleep(1 * time.Millisecond)
-
-	config, err := GetConfigFromVault(testconfig.token, testconfig.configpath, testconfig.config)
-	require.NoError(t, err)
-	assert.NotNil(t, config.Agent)
-	assert.NotNil(t, config.Restic)
-	assert.NotEmpty(t, config.Gocrypt)
-
-	testconfig.configpath = "notExist"
-	config, err = GetConfigFromVault(testconfig.token, testconfig.configpath, testconfig.config)
-	assert.Error(t, err)
-	assert.EqualError(t, err, ERROR_VAULT_NO_SECRET)
-	assert.Nil(t, config)
-
-	err = AgentConfiguration.DB.Close()
-	assert.NoError(t, err)
-
-	err = server.Shutdown(context.Background())
-	assert.NoError(t, err)
-}
-
 func TestMainInit(t *testing.T) {
 	fmt.Println("running: TestMainInit")
 	testconfig := readConfig(t)
