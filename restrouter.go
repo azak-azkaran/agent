@@ -280,6 +280,7 @@ func postBackup(c *gin.Context) {
 		cmd = UnlockRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	case "list":
 		cmd = ListRepo(config.Restic.Environment, config.Agent.HomeFolder)
+		msg.PrintOutput = true
 	case "forget":
 		cmd = ForgetRep(config.Restic.Environment, config.Agent.HomeFolder)
 	default:
