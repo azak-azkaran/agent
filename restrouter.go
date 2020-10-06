@@ -193,7 +193,7 @@ func getStatus(c *gin.Context) {
 	for _, k := range jobmap.Keys() {
 		v, ok := jobmap.Get(k)
 		if ok {
-			cmd := v.(Job)
+			cmd := v.(*Job)
 			buffer.WriteString("Job: " + k + " Status: " + cmd.Cmd.ProcessState.String())
 		} else {
 			buffer.WriteString("Job: " + k + " Error while retrieving")
@@ -377,11 +377,11 @@ func postGit(c *gin.Context) {
 		case "clone":
 			job = CreateJobFromFunction(func() error {
 				return GitClone(v.Rep, v.Directory, config.Agent.HomeFolder, v.PersonalToken)
-			}, msg.Mode+v.Name)
+			}, msg.Mode+" "+v.Name)
 		case "pull":
 			job = CreateJobFromFunction(func() error {
-				return GitPull(v.Directory, config.Agent.HomeFolder)
-			}, msg.Mode+v.Name)
+				return GitPull(v.Directory, config.Agent.HomeFolder, v.PersonalToken)
+			}, msg.Mode+" "+v.Name)
 		default:
 			returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_GIT, c)
 			return
@@ -397,6 +397,7 @@ func postGit(c *gin.Context) {
 
 		if err != nil {
 			ok = false
+			buffer.WriteString("\n")
 			buffer.WriteString(err.Error())
 		}
 	}

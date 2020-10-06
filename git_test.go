@@ -41,6 +41,6 @@ func TestGitPull(t *testing.T) {
 	assert.NoError(t, err)
 	assert.DirExists(t, test_folder)
 
-	err = GitPull(GIT_TEST_FOLDER, pwd)
+	err = GitPull(GIT_TEST_FOLDER, pwd, "")
 	assert.NoError(t, err)
 }

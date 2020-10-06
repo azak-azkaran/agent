@@ -17,6 +17,7 @@ type Job struct {
 	Stderr      *bytes.Buffer
 	Name        string
 	printOutput bool
+	finished    bool
 }
 
 func Log(toQueue string, p bool) {
@@ -25,7 +26,12 @@ func Log(toQueue string, p bool) {
 	}
 }
 
+func (job *Job) IsFinished() bool {
+	return job.finished
+}
+
 func (job *Job) QueueStatus() {
+	job.finished = true
 	if job.Cmd != nil && job.Cmd.Process == nil {
 		log.Println("Process not found")
 		return
@@ -42,7 +48,6 @@ func (job *Job) QueueStatus() {
 	} else {
 		Log("No Output in stderr", job.printOutput)
 	}
-
 }
 
 func CreateJobFromFunction(f func() error, name string) Job {
@@ -56,7 +61,7 @@ func CreateJobFromFunction(f func() error, name string) Job {
 		Function: f,
 		Name:     name,
 	}
-	jobmap.Set(name, job)
+	jobmap.Set(name, &job)
 	return job
 }
 
@@ -68,7 +73,7 @@ func CreateJobFromCommand(cmd *exec.Cmd, name string) Job {
 	if jobmap.Has(name) {
 		v, ok := jobmap.Get(name)
 		if ok {
-			oldCmd := v.(Job)
+			oldCmd := v.(*Job)
 			if oldCmd.Cmd.Process != nil {
 				log.Println("Found job:", name, "\tPID: ", oldCmd.Cmd.Process.Pid)
 			}
@@ -85,7 +90,7 @@ func CreateJobFromCommand(cmd *exec.Cmd, name string) Job {
 
 	cmd.Stdout = job.Stdout
 	cmd.Stderr = job.Stderr
-	jobmap.Set(name, job)
+	jobmap.Set(name, &job)
 	return job
 }
 
@@ -98,6 +103,7 @@ func (job *Job) RunJob(printOutput bool) error {
 func (job *Job) doJob() error {
 	err := job.Function()
 	job.QueueStatus()
+	jobmap.Set(job.Name, job)
 	return err
 }
 

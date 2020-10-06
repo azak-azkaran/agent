@@ -168,7 +168,7 @@ func TestRestPostBackup(t *testing.T) {
 	}
 
 	require.NotNil(t, v)
-	cmd := v.(Job)
+	cmd := v.(*Job)
 
 	fmt.Println(cmd.Stdout.String())
 

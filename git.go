@@ -14,29 +14,25 @@ func GitClone(repo string, dir string, home string, personal string) error {
 	var err error
 
 	dir = strings.ReplaceAll(dir, HOME, home)
-
-	log.Println("Checkout out to Dir: ", dir)
 	log.Println("Checkout out to Repo: ", repo)
-	if personal == "" {
-		r, err = git.PlainClone(dir, false, &git.CloneOptions{
-			URL:      repo,
-			Progress: os.Stdout,
-		})
-	} else {
+	log.Println("Checkout out to Dir: ", dir)
 
-		r, err = git.PlainClone(dir, false, &git.CloneOptions{
+	cloneOptions := git.CloneOptions{
+		URL:      repo,
+		Progress: os.Stdout,
+	}
+
+	if personal != "" {
+		cloneOptions.Auth = &http.BasicAuth{
 			// The intended use of a GitHub personal access token is in replace of your password
 			// because access tokens can easily be revoked.
 			// https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/
-			Auth: &http.BasicAuth{
-				Username: "abc123", // yes, this can be anything except an empty string
-				Password: personal,
-			},
-			URL:      repo,
-			Progress: os.Stdout,
-		})
-
+			Username: "abc123", // yes, this can be anything except an empty string
+			Password: personal,
+		}
 	}
+
+	r, err = git.PlainClone(dir, false, &cloneOptions)
 	if err != nil {
 		return err
 	}
@@ -46,11 +42,10 @@ func GitClone(repo string, dir string, home string, personal string) error {
 		return err
 	}
 	log.Println("Checkout out Ref: ", ref)
-
 	return nil
 }
 
-func GitPull(dir string, home string) error {
+func GitPull(dir string, home string, personal string) error {
 	path := strings.ReplaceAll(dir, HOME, home)
 	log.Println("Pulling from: ", path)
 	r, err := git.PlainOpen(path)
@@ -64,8 +59,15 @@ func GitPull(dir string, home string) error {
 		return err
 	}
 
+	var pullOptions git.PullOptions
+	if personal != "" {
+		pullOptions.Auth = &http.BasicAuth{
+			Username: "abc123", // yes, this can be anything except an empty string
+			Password: personal,
+		}
+	}
 	// Pull the latest changes from the origin remote and merge into the current branch
-	err = w.Pull(&git.PullOptions{})
+	err = w.Pull(&pullOptions)
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return err
 	}

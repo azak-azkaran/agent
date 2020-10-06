@@ -34,15 +34,15 @@ func TestJobRunJobBackground(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		v, ok := jobmap.Get("test")
 		require.True(t, ok)
-		job := v.(Job)
-		return job.Cmd.Process != nil
+		j := v.(*Job)
+		return j.Cmd.Process != nil
 	}, time.Duration(4*time.Second), time.Duration(1*time.Second))
 	v, ok := jobmap.Get("test")
 	require.True(t, ok)
-	job = v.(Job)
+	j := v.(*Job)
 
-	assert.Equal(t, "hallo\n", job.Stdout.String())
-	assert.Equal(t, "", job.Stderr.String())
+	assert.Equal(t, "hallo\n", j.Stdout.String())
+	assert.Equal(t, "", j.Stderr.String())
 }
 
 func TestJobRunJob(t *testing.T) {
@@ -56,9 +56,9 @@ func TestJobRunJob(t *testing.T) {
 
 	v, ok := jobmap.Get("test")
 	require.True(t, ok)
-	job = v.(Job)
-	assert.Equal(t, "hallo\n", job.Stdout.String())
-	assert.Equal(t, "", job.Stderr.String())
+	j := v.(*Job)
+	assert.Equal(t, "hallo\n", j.Stdout.String())
+	assert.Equal(t, "", j.Stderr.String())
 
 	cmd = exec.Command("printenv")
 	cmd.Env = []string{"TEST=hallo"}
@@ -69,9 +69,9 @@ func TestJobRunJob(t *testing.T) {
 
 	v, ok = jobmap.Get("test")
 	require.True(t, ok)
-	job = v.(Job)
-	assert.Equal(t, "TEST=hallo\n", job.Stdout.String())
-	assert.Equal(t, "", job.Stderr.String())
+	j = v.(*Job)
+	assert.Equal(t, "TEST=hallo\n", j.Stdout.String())
+	assert.Equal(t, "", j.Stderr.String())
 }
 
 func TestJobQueueStatus(t *testing.T) {

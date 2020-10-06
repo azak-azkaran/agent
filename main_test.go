@@ -122,7 +122,7 @@ func TestMainStart(t *testing.T) {
 	Start()
 
 	time.Sleep(1 * time.Millisecond)
-	assert.Eventually(t, checkJobmap,
+	assert.Eventually(t, func() bool { return checkJobmap("check") },
 		time.Duration(20*time.Second), time.Duration(1*time.Second))
 
 	err = server.Shutdown(context.Background())
@@ -193,7 +193,8 @@ func TestMainMain(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 	assert.Eventually(t, checkContents, 120*time.Second, 1*time.Second)
-	assert.Eventually(t, checkJobmap, 120*time.Second, 1*time.Second)
+	assert.Eventually(t, func() bool { return checkJobmap("check") },
+		120*time.Second, 1*time.Second)
 
 	stopChan <- syscall.SIGINT
 	time.Sleep(10 * time.Second)
@@ -430,15 +431,17 @@ func TestMainGitCheckout(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		path := strings.ReplaceAll(GIT_TEST_FOLDER, HOME, pwd)
-		f, err := os.Open(path)
+		f, err := os.Stat(path + "/.git")
 		if err != nil {
 			return false
 		}
-		defer f.Close()
-
-		_, err = f.Readdirnames(1) // Or f.Readdir(1)
-		return err == nil
+		return f.IsDir()
 	},
+		time.Duration(20*time.Second), time.Duration(1*time.Second))
+
+	GitCheckout()
+
+	assert.Eventually(t, func() bool { return checkJobmap("pull") },
 		time.Duration(20*time.Second), time.Duration(1*time.Second))
 
 	err = server.Shutdown(context.Background())
@@ -454,11 +457,11 @@ func TestMainGitCheckout(t *testing.T) {
 
 }
 
-func checkJobmap() bool {
+func checkJobmap(jobname string) bool {
 	for item := range jobmap.IterBuffered() {
-		if strings.Contains(item.Key, "check") {
-			j := item.Val.(Job)
-			return j.Cmd.Process != nil
+		if strings.Contains(item.Key, jobname) {
+			j := item.Val.(*Job)
+			return j.IsFinished()
 		}
 	}
 	return false

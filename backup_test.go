@@ -111,8 +111,8 @@ func TestBackupExistsRepo(t *testing.T) {
 
 	v, ok := jobmap.Get("test")
 	require.True(t, ok)
-	job = v.(Job)
-	fmt.Println(job.Stdout.String())
+	j := v.(*Job)
+	fmt.Println(j.Stdout.String())
 }
 
 func TestBackupInitRepo(t *testing.T) {
