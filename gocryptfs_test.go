@@ -48,7 +48,7 @@ func TestGocryptfsMountGocryptfs(t *testing.T) {
 	b, err := ioutil.ReadFile(test_mountpath + GOCRYPT_TEST_FILE) // just pass the file name
 	assert.NoError(t, err)
 	assert.Equal(t, "testfile\n", string(b))
-	time.Sleep(4 * time.Second)
+	time.Sleep(6 * time.Second)
 	assert.NoFileExists(t, test_mountpath+GOCRYPT_TEST_FILE)
 }
 

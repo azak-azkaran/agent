@@ -137,9 +137,10 @@ func TestRestPostBackup(t *testing.T) {
 	msg.Run = false
 	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 
+	time.Sleep(10 * time.Second)
 	msg.Mode = "check"
 	msg.Run = true
-	sendingPost(t, REST_TEST_BACKUP, http.StatusInternalServerError, msg)
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
 
 	msg.Mode = "unlock"
 	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
