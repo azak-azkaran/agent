@@ -216,7 +216,13 @@ func postMount(c *gin.Context) {
 		return
 	}
 
-	config, err := CreateConfigFullFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	config, err := CreateConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	if err != nil {
+		returnErr(err, ERROR_CONFIG, c)
+		return
+	}
+
+	err = config.GetGocryptConfig()
 	if err != nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
@@ -242,8 +248,14 @@ func postBackup(c *gin.Context) {
 		return
 	}
 
-	config, err := CreateConfigFullFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
-	if err != nil || config.Restic == nil {
+	config, err := CreateConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	if err != nil {
+		returnErr(err, ERROR_CONFIG, c)
+		return
+	}
+
+	config.GetResticConfig()
+	if err != nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
@@ -343,8 +355,14 @@ func postGit(c *gin.Context) {
 		return
 	}
 
-	config, err := CreateConfigFullFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
-	if err != nil || config.Restic == nil {
+	config, err := CreateConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	if err != nil {
+		returnErr(err, ERROR_CONFIG, c)
+		return
+	}
+
+	err = config.GetGitConfig()
+	if err != nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
 	}
