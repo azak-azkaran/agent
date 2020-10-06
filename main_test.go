@@ -16,11 +16,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	cmap "github.com/orcaman/concurrent-map"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func clear() {
+	viper.Reset()
 	pwd, _ := os.Getwd()
 	test_folder := strings.ReplaceAll(BACKUP_TEST_FOLDER, HOME, pwd)
 	err := RemoveContents(test_folder)
@@ -46,6 +48,7 @@ func clear() {
 
 func TestMainInit(t *testing.T) {
 	fmt.Println("running: TestMainInit")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
@@ -215,6 +218,7 @@ func TestMainCheckKeyFile(t *testing.T) {
 	fmt.Println("Running: TestMainCheckKeyFile")
 	t.Cleanup(func() {
 		os.Remove(MAIN_TEST_KEYFILE_PATH)
+		clear()
 	})
 	AgentConfiguration.DB = InitDB("", "", true)
 	require.NotNil(t, AgentConfiguration.DB)
@@ -245,6 +249,7 @@ func TestMainCheckKeyFile(t *testing.T) {
 
 func TestMainSendRequest(t *testing.T) {
 	fmt.Println("running: TestMainSendRequest")
+	t.Cleanup(clear)
 	gin.SetMode(gin.TestMode)
 
 	msg := TokenMessage{
@@ -291,7 +296,6 @@ func TestMainSendRequest(t *testing.T) {
 
 func TestMainBackupRepositoryExists(t *testing.T) {
 	fmt.Println("running: TestMainBackupRepositoryExists")
-
 	t.Cleanup(clear)
 	jobmap = cmap.New()
 	gin.SetMode(gin.TestMode)

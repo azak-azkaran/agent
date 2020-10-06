@@ -15,6 +15,7 @@ import (
 
 func TestJobAddJob(t *testing.T) {
 	fmt.Println("running: TestJobAddJob")
+	t.Cleanup(clear)
 	cmd := exec.Command("echo", "hallo")
 	CreateJobFromCommand(cmd, "test")
 	assert.NotNil(t, jobmap)
@@ -23,6 +24,7 @@ func TestJobAddJob(t *testing.T) {
 
 func TestJobRunJobBackground(t *testing.T) {
 	fmt.Println("running: TestJobRunJobBackground")
+	t.Cleanup(clear)
 	cmd := exec.Command("echo", "hallo")
 
 	job := CreateJobFromCommand(cmd, "test")
@@ -45,6 +47,7 @@ func TestJobRunJobBackground(t *testing.T) {
 
 func TestJobRunJob(t *testing.T) {
 	fmt.Println("running: TestJobRunJob")
+	t.Cleanup(clear)
 	cmd := exec.Command("echo", "hallo")
 
 	job := CreateJobFromCommand(cmd, "test")
@@ -73,6 +76,7 @@ func TestJobRunJob(t *testing.T) {
 
 func TestJobQueueStatus(t *testing.T) {
 	fmt.Println("running: TestJobQueueStatus")
+	t.Cleanup(clear)
 
 	cmd := exec.Command("echo", "hallo")
 

@@ -20,6 +20,7 @@ var count int = 0
 
 func TestGocryptfsMountGocryptfs(t *testing.T) {
 	fmt.Println("running: TestGocryptfsMountGocryptfs")
+	t.Cleanup(clear)
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
 	home, err := os.Getwd()
@@ -53,6 +54,7 @@ func TestGocryptfsMountGocryptfs(t *testing.T) {
 
 func TestGocryptfsMountFolders(t *testing.T) {
 	fmt.Println("running: TestGocryptfsMountFolders")
+	t.Cleanup(clear)
 	idletime, err := time.ParseDuration("3s")
 	assert.NoError(t, err)
 
@@ -99,6 +101,7 @@ func CheckCmd(cmd *exec.Cmd, v string) error {
 
 func TestGocryptfsIsEmpty(t *testing.T) {
 	fmt.Println("running: TestGocryptfsIsEmpty")
+	t.Cleanup(clear)
 	home, err := os.Getwd()
 	require.NoError(t, err)
 

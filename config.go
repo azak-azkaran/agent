@@ -285,41 +285,7 @@ func CreateConfigFullFromVault(token string, hostname string, vaultConfig *vault
 	return config, nil
 }
 
-func bindEnviorment() error {
-	viper.SetEnvPrefix("agent")
-	err := viper.BindEnv(MAIN_ADDRESS)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_PATHDB)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_TIME_DURATION)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_MOUNT_DURATION)
-	if err != nil {
-		return err
-	}
-	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindEnv(MAIN_VAULT_KEY_FILE)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func parseConfiguration(confi *Configuration) {
+func ParseConfiguration(confi *Configuration) {
 	if viper.IsSet(MAIN_ADDRESS) {
 		confi.Address = viper.GetString(MAIN_ADDRESS)
 	} else {

@@ -139,3 +139,66 @@ func TestBackupInitRepo(t *testing.T) {
 	err = job.RunJob(false)
 	assert.NoError(t, err)
 }
+
+func TestBackupForget(t *testing.T) {
+	fmt.Println("running: TestBackupPrune")
+	clear()
+	t.Cleanup(clear)
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	test_folder := strings.ReplaceAll(BACKUP_TEST_FOLDER, HOME, pwd)
+	test_exclude := strings.ReplaceAll(BACKUP_TEST_EXCLUDE_FILE, HOME, pwd)
+	test_conf := strings.ReplaceAll(BACKUP_TEST_CONF_FILE, HOME, pwd)
+
+	env := []string{
+		RESTIC_PASSWORD + "test",
+		RESTIC_REPOSITORY + test_folder,
+	}
+
+	err = os.MkdirAll(test_folder, os.ModePerm)
+	assert.NoError(t, err)
+	require.DirExists(t, test_folder)
+
+	cmd := InitRepo(env, pwd)
+	job := CreateJobFromCommand(cmd, "init")
+	err = job.RunJob(false)
+	require.NoError(t, err)
+
+	cmd = Backup("~/", env, pwd, test_exclude, 2000, 2000)
+	job = CreateJobFromCommand(cmd, "backup")
+	err = job.RunJob(false)
+	assert.NoError(t, err)
+	assert.FileExists(t, test_conf)
+
+	cmd = Backup("~/", env, pwd, test_exclude, 2000, 2000)
+	job = CreateJobFromCommand(cmd, "backup 2")
+	err = job.RunJob(false)
+	assert.NoError(t, err)
+
+	cmd = ListRepo(env, pwd)
+	job = CreateJobFromCommand(cmd, "list")
+	err = job.RunJob(false)
+	assert.NoError(t, err)
+	output := job.Stdout.String()
+	assert.NotEmpty(t, output)
+	assert.Contains(t, output, pwd)
+	assert.Contains(t, output, hostname)
+	assert.Contains(t, output, "2 snapshots")
+
+	cmd = ForgetRepoDetail(env, pwd, 1, 1, 1)
+	job = CreateJobFromCommand(cmd, "forget")
+	err = job.RunJob(true)
+
+	cmd = ListRepo(env, pwd)
+	job = CreateJobFromCommand(cmd, "list")
+	err = job.RunJob(true)
+	assert.NoError(t, err)
+	output = job.Stdout.String()
+	assert.NotEmpty(t, output)
+	assert.Contains(t, output, pwd)
+	assert.Contains(t, output, hostname)
+	assert.Contains(t, output, "1 snapshots")
+}

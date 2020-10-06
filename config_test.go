@@ -54,6 +54,7 @@ func readConfig(t *testing.T) TestConfig {
 
 func TestConfigGetCreateConfigFullFromVault(t *testing.T) {
 	fmt.Println("running: TestConfigGetCreateConfigFullFromVault")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
@@ -82,6 +83,7 @@ func TestConfigGetCreateConfigFullFromVault(t *testing.T) {
 
 func TestConfigGetGocryptConfig(t *testing.T) {
 	fmt.Println("running: TestConfigGetGocryptConfig")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -98,6 +100,7 @@ func TestConfigGetGocryptConfig(t *testing.T) {
 
 func TestConfigGetResticConfig(t *testing.T) {
 	fmt.Println("running: TestConfigGetResticConfig")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -111,6 +114,7 @@ func TestConfigGetResticConfig(t *testing.T) {
 
 func TestConfigGetAgentConfig(t *testing.T) {
 	fmt.Println("running: TestConfigGetAgentConfig")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -129,6 +133,7 @@ func TestConfigGetAgentConfig(t *testing.T) {
 
 func TestConfigGetGitConfig(t *testing.T) {
 	fmt.Println("running: TestConfigGetGitConfig")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	seal, err := IsSealed(testconfig.config)
 	require.NoError(t, err)
@@ -142,4 +147,21 @@ func TestConfigGetGitConfig(t *testing.T) {
 	assert.Equal(t, "https://github.com/azak-azkaran/reverse-link", conf.Rep)
 	assert.Equal(t, "", conf.PersonalToken)
 	assert.Equal(t, "~/test/reverse", conf.Directory)
+}
+
+func TestConfigParseConfigurations(t *testing.T) {
+	fmt.Println("running: TestConfigParseConfigurations")
+	t.Cleanup(clear)
+	config := Configuration{}
+	config.VaultConfig = &vault.Config{
+		Address: "http://localhost:2200",
+	}
+	ParseConfiguration(&config)
+
+	assert.Equal(t, "localhost:8081", config.Address)
+	assert.Equal(t, "/opt/agent/db", config.PathDB)
+	assert.Equal(t, 30*time.Minute, config.TimeBetweenStart)
+	assert.Empty(t, config.MountDuration)
+	assert.Empty(t, config.VaultKeyFile)
+	assert.False(t, config.MountAllow)
 }

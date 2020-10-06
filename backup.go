@@ -38,16 +38,24 @@ func UnlockRepo(env []string, home string) *exec.Cmd {
 	return createCmd("restic unlock", env, home)
 }
 
-func PruneRepo(env []string, home string) *exec.Cmd {
-	return createCmd("restic prune", env, home)
-}
-
 func ListRepo(env []string, home string) *exec.Cmd {
 	return createCmd("restic snapshots", env, home)
 }
 
+func ForgetRepoDetail(env []string, home string, daily int, monthly int, yearly int) *exec.Cmd {
+	var bud strings.Builder
+	bud.WriteString("restic forget --prune --keep-daily ")
+	bud.WriteString(strconv.Itoa(daily))
+	bud.WriteString(" --keep-monthly ")
+	bud.WriteString(strconv.Itoa(monthly))
+	bud.WriteString(" --keep-yearly ")
+	bud.WriteString(strconv.Itoa(yearly))
+	bud.WriteString(" --prune")
+	return createCmd(bud.String(), env, home)
+}
+
 func ForgetRep(env []string, home string) *exec.Cmd {
-	return createCmd("restic forget --prune --keep-daily 7 --keep-monthly 12 --keep-yearly 3", env, home)
+	return ForgetRepoDetail(env, home, 7, 12, 3)
 }
 
 func Backup(path string, env []string, home string, exclude string, upload int, download int) *exec.Cmd {

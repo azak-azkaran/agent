@@ -268,8 +268,6 @@ func postBackup(c *gin.Context) {
 		cmd = UnlockRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	case "list":
 		cmd = ListRepo(config.Restic.Environment, config.Agent.HomeFolder)
-	case "prune":
-		cmd = PruneRepo(config.Restic.Environment, config.Agent.HomeFolder)
 	case "forget":
 		cmd = ForgetRep(config.Restic.Environment, config.Agent.HomeFolder)
 	default:

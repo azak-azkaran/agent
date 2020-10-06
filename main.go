@@ -25,6 +25,39 @@ var AgentConfiguration Configuration
 var stopChan = make(chan os.Signal, 2)
 var restServerAgent *http.Server
 
+func bindEnviorment() error {
+	viper.SetEnvPrefix("agent")
+	err := viper.BindEnv(MAIN_ADDRESS)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_PATHDB)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_TIME_DURATION)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_MOUNT_DURATION)
+	if err != nil {
+		return err
+	}
+	err = viper.BindEnv(MAIN_MOUNT_ALLOW)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_VAULT_KEY_FILE)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 func Init(vaultConfig *vault.Config, args []string) error {
 	jobmap = cmap.New()
 	addressCommend := pflag.NewFlagSet("agent", pflag.ContinueOnError)
@@ -61,7 +94,7 @@ func Init(vaultConfig *vault.Config, args []string) error {
 		return err
 	}
 
-	parseConfiguration(&config)
+	ParseConfiguration(&config)
 	AgentConfiguration = config
 	return nil
 }
@@ -345,15 +378,16 @@ func run() {
 	seal, err := SealStatus(AgentConfiguration.VaultConfig)
 	if err != nil {
 		log.Println(MAIN_ERROR_CHECK_SEAL, err)
+	} else {
+
+		if seal.Sealed {
+			log.Println(ERROR_VAULT_SEALED)
+			unsealVault(seal)
+		}
+		Start()
+		AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
 	}
 
-	if seal.Sealed {
-		log.Println(ERROR_VAULT_SEALED)
-		unsealVault(seal)
-	}
-
-	Start()
-	AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
 }
 
 func SendRequest(reqBody []byte, endpoint string) (bool, error) {
