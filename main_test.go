@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -139,7 +138,10 @@ func TestMainStart(t *testing.T) {
 
 func TestMainMain(t *testing.T) {
 	fmt.Println("running: TestMainMain")
-	t.Cleanup(clear)
+	t.Cleanup(func() {
+		os.Remove(MAIN_TEST_KEYFILE_PATH)
+		clear()
+	})
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
 	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
@@ -147,6 +149,7 @@ func TestMainMain(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_KEY_FILE", MAIN_TEST_KEYFILE_PATH)
 	multipleKey = true
 	sealStatus = true
 	Progress = 0
@@ -154,38 +157,27 @@ func TestMainMain(t *testing.T) {
 	home, err := os.Getwd()
 	require.NoError(t, err)
 
+	f, err := os.Create(MAIN_TEST_KEYFILE_PATH)
+	require.NoError(t, err)
+	w := bufio.NewWriter(f)
+	key := "test"
+	for i := 1; i < 6; i++ {
+		_, err := w.WriteString(key + strconv.Itoa(i) + "\n")
+		assert.NoError(t, err)
+	}
+	err = w.Flush()
+	assert.NoError(t, err)
+	require.FileExists(t, MAIN_TEST_KEYFILE_PATH)
+
 	go main()
 	time.Sleep(1 * time.Second)
 	AgentConfiguration.VaultConfig = testconfig.config
 
-	resp, err := http.Get(REST_TEST_PING)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+	sendingGet(t, REST_TEST_PING, http.StatusOK)
 
-	for i := 1; i < 6; i++ {
-		msg := VaultKeyMessage{
-			Key:   "test" + strconv.Itoa(i),
-			Share: i,
-		}
-		reqBody, err := json.Marshal(msg)
-		require.NoError(t, err)
-
-		fmt.Println("Sending Body:", string(reqBody))
-		_, err = http.Post(REST_TEST_UNSEAL_KEY,
-			MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
-		assert.NoError(t, err)
-	}
-
-	tokenMessage := TokenMessage{
+	sendingPost(t, REST_TEST_TOKEN, http.StatusOK, TokenMessage{
 		Token: "randomtoken",
-	}
-	reqBody, err := json.Marshal(tokenMessage)
-	require.NoError(t, err)
-
-	fmt.Println("Sending Body:", string(reqBody))
-	_, err = http.Post(REST_TEST_TOKEN,
-		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
+	})
 
 	token, err := GetToken(AgentConfiguration.DB)
 	assert.NoError(t, err)
