@@ -7,6 +7,9 @@ const (
 	RESTIC_ACCESS_KEY = "AWS_ACCESS_KEY_ID="
 	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
 
+	// Git Contstatns
+	GIT_REMOTE_NAME = "agent_remote"
+
 	// Store Constants
 	STORE_TOKEN       = "token"
 	STORE_TIMESTAMP   = "timestamp"

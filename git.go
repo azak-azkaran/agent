@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
@@ -45,6 +46,24 @@ func GitClone(repo string, dir string, home string, personal string) error {
 	return nil
 }
 
+func GitCreateRemote(dir string, home string, repoUrl string) error {
+	path := strings.ReplaceAll(dir, HOME, home)
+	r, err := git.PlainOpen(path)
+	if err != nil {
+		return err
+	}
+	_, err = r.Remote(GIT_REMOTE_NAME)
+	if err != nil && err == git.ErrRemoteNotFound {
+		log.Println("Adding remote: ", GIT_REMOTE_NAME)
+		_, err = r.CreateRemote(&config.RemoteConfig{
+			Name: GIT_REMOTE_NAME,
+			URLs: []string{repoUrl},
+		})
+		return err
+	}
+	return err
+}
+
 func GitPull(dir string, home string, personal string) error {
 	path := strings.ReplaceAll(dir, HOME, home)
 	log.Println("Pulling from: ", path)
@@ -59,13 +78,17 @@ func GitPull(dir string, home string, personal string) error {
 		return err
 	}
 
-	var pullOptions git.PullOptions
+	pullOptions := git.PullOptions{
+		RemoteName: GIT_REMOTE_NAME,
+	}
+
 	if personal != "" {
 		pullOptions.Auth = &http.BasicAuth{
 			Username: "abc123", // yes, this can be anything except an empty string
 			Password: personal,
 		}
 	}
+
 	// Pull the latest changes from the origin remote and merge into the current branch
 	err = w.Pull(&pullOptions)
 	if err != nil && err != git.NoErrAlreadyUpToDate {
