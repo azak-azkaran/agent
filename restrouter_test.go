@@ -179,8 +179,32 @@ func TestRestPostBackup(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRestForbidden(t *testing.T) {
+	fmt.Println("running: TestRestPostBackup")
+	t.Cleanup(clear)
+	setupRestrouterTest(t)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
+
+	go fun()
+	time.Sleep(1 * time.Millisecond)
+
+	msg := BackupMessage{
+		Mode:        "backup",
+		Test:        true,
+		Run:         true,
+		Debug:       true,
+		PrintOutput: true,
+		Token:       "randomtoken",
+	}
+	sendingPost(t, REST_TEST_BACKUP, http.StatusOK, msg)
+
+	err := server.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+
 func TestRestPostMount(t *testing.T) {
 	fmt.Println("running: TestRestPostMount")
+	t.Cleanup(clear)
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	mountMsg := MountMessage{

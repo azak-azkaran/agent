@@ -260,6 +260,8 @@ func postBackup(c *gin.Context) {
 		return
 	}
 
+	log.Println("config:", config)
+
 	var cmd *exec.Cmd
 	switch msg.Mode {
 	case "init":

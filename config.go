@@ -141,7 +141,6 @@ func GetResticConfig(config *vault.Config, token string, path string) (*ResticCo
 	data, err := getDataFromSecret(config, token, "restic/data/"+path)
 	if err != nil {
 		return nil, err
-
 	}
 
 	var conf ResticConfig

@@ -21,6 +21,7 @@ var multipleKey bool = false
 
 var Progress = 0
 var Hostname string
+var ResticPath = "resticpath"
 
 func StartServer(t *testing.T, address string) {
 	if running {
@@ -63,23 +64,8 @@ func createHandler() http.Handler {
 		sealStatus = true
 		c.JSON(http.StatusOK, nil)
 	})
-	r.GET("/v1/restic/data/resticpath", func(c *gin.Context) {
-		log.Println("MOCK-Server: called resticpath")
-		var msg vault.Secret
-		data := make(map[string]interface{})
-		secret := make(map[string]string)
-		secret["path"] = "~/"
-		secret["repo"] = VAULT_TEST_BACKUP_PATH
-		secret["pw"] = VAULT_TEST_PASSWORD
-		secret["exclude"] = VAULT_TEST_BACKUP_EXCLUDE_FILE
-		secret["access_key"] = VAULT_TEST_BACKUP_ACCESS_KEY
-		secret["secret_key"] = VAULT_TEST_BACKUP_SECRET_KEY
-		data["data"] = secret
-		msg.Data = data
-		c.JSON(http.StatusOK, msg)
-	})
-	//r.GET("/v1/config/"+Hostname, config)
-	//r.GET("/v1/config/configpath", config)
+	r.GET("/v1/restic/data/resticpath", test_restic)
+	r.GET("/v1/restic/data/forbidden", test_forbidden)
 	r.GET("/v1/config/:name", func(c *gin.Context) {
 		name := c.Param("name")
 
@@ -124,7 +110,7 @@ func test_config(c *gin.Context) {
 		log.Println(err)
 	}
 
-	data["restic"] = "resticpath"
+	data["restic"] = ResticPath
 	data["gocryptfs"] = VAULT_TEST_CONFIGPATH
 	data["git"] = "gitpath,vimrc"
 	data["home"] = pwd
@@ -193,5 +179,31 @@ func test_unseal(c *gin.Context) {
 	}
 	msg.Sealed = sealStatus
 
+	c.JSON(http.StatusOK, msg)
+}
+
+func test_forbidden(c *gin.Context) {
+	log.Println("MOCK-Server: called forbidden")
+	var msg vault.Secret
+	data := make(map[string]interface{})
+	secret := make(map[string]string)
+	data["data"] = secret
+	msg.Data = data
+	c.JSON(http.StatusForbidden, msg)
+}
+
+func test_restic(c *gin.Context) {
+	log.Println("MOCK-Server: called resticpath")
+	var msg vault.Secret
+	data := make(map[string]interface{})
+	secret := make(map[string]string)
+	secret["path"] = "~/"
+	secret["repo"] = VAULT_TEST_BACKUP_PATH
+	secret["pw"] = VAULT_TEST_PASSWORD
+	secret["exclude"] = VAULT_TEST_BACKUP_EXCLUDE_FILE
+	secret["access_key"] = VAULT_TEST_BACKUP_ACCESS_KEY
+	secret["secret_key"] = VAULT_TEST_BACKUP_SECRET_KEY
+	data["data"] = secret
+	msg.Data = data
 	c.JSON(http.StatusOK, msg)
 }
