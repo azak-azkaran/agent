@@ -42,7 +42,7 @@ func clear() {
 		fmt.Println("Error cleaning up: ", err.Error())
 	}
 	os.Remove(test_folder)
-
+	forbidden = false
 }
 
 func TestMainInit(t *testing.T) {

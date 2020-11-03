@@ -18,10 +18,10 @@ var server *http.Server
 var running bool = false
 var sealStatus bool = false
 var multipleKey bool = false
+var forbidden bool = false
 
 var Progress = 0
 var Hostname string
-var ResticPath = "resticpath"
 
 func StartServer(t *testing.T, address string) {
 	if running {
@@ -110,7 +110,11 @@ func test_config(c *gin.Context) {
 		log.Println(err)
 	}
 
-	data["restic"] = ResticPath
+	if forbidden {
+		data["restic"] = "forbidden"
+	} else {
+		data["restic"] = "resticpath"
+	}
 	data["gocryptfs"] = VAULT_TEST_CONFIGPATH
 	data["git"] = "gitpath,vimrc"
 	data["home"] = pwd

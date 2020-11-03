@@ -119,7 +119,14 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool,
 
 func returnErr(err error, source string, c *gin.Context) {
 	log.Println(ERROR_PREFIX+source, err.Error())
-	c.JSON(http.StatusInternalServerError, gin.H{
+
+	var code int
+	if source == ERROR_CONFIG {
+		code = http.StatusForbidden
+	} else {
+		code = http.StatusInternalServerError
+	}
+	c.JSON(code, gin.H{
 		JSON_MESSAGE: err.Error(),
 	})
 }
@@ -254,7 +261,7 @@ func postBackup(c *gin.Context) {
 		return
 	}
 
-	config.GetResticConfig()
+	err = config.GetResticConfig()
 	if err != nil {
 		returnErr(err, ERROR_CONFIG, c)
 		return
