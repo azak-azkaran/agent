@@ -382,7 +382,12 @@ func postGit(c *gin.Context) {
 			}, msg.Mode+" "+v.Name)
 		case "pull":
 			job = CreateJobFromFunction(func() error {
-				return GitPull(v.Directory, config.Agent.HomeFolder, v.PersonalToken)
+				err := GitCreateRemote(v.Directory, config.Agent.HomeFolder, v.Rep)
+				if err != nil {
+					return err
+				} else {
+					return GitPull(v.Directory, config.Agent.HomeFolder, v.PersonalToken)
+				}
 			}, msg.Mode+" "+v.Name)
 		default:
 			returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_GIT, c)
