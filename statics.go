@@ -7,6 +7,9 @@ const (
 	RESTIC_ACCESS_KEY = "AWS_ACCESS_KEY_ID="
 	RESTIC_SECRET_KEY = "AWS_SECRET_ACCESS_KEY="
 
+	// Git Contstatns
+	GIT_REMOTE_NAME = "agent_remote"
+
 	// Store Constants
 	STORE_TOKEN       = "token"
 	STORE_TIMESTAMP   = "timestamp"
@@ -52,13 +55,11 @@ const (
 	ERROR_MODE         = "Backup Mode:"
 	ERROR_GIT          = "GIT Mode:"
 	ERROR_STATUS       = "GetStatus:"
-	ERROR_LOG          = "GetLogs:"
 	ERROR_ISSEALED     = "IsSealed:"
 	ERROR_UNSEAL       = "Unseal:"
 	ERROR_SEAL         = "Seal:"
 	ERROR_RUNBACKUP    = "RunBackupJob:"
 	ERROR_RUNMOUNT     = "RunMountJob:"
-	ERROR_ENQUEUE      = "Enqueue:"
 	ERROR_CONFIG       = "GetConfigFromVault:"
 	ERROR_BINDING      = "BindJSON:"
 	ERROR_PUT_TOKEN    = "PutToken:"
@@ -88,6 +89,7 @@ const (
 	GIT_TEST_REPO         = "https://github.com/azak-azkaran/reverse-link"
 	GIT_TEST_FOLDER_VIMRC = "~/test/vimrc"
 	GIT_TEST_REPO_VIMRC   = "https://github.com/amix/vimrc.git"
+	GIT_TEST_COMMIT       = "dd7e3c0b1ec7bbde6034d8cb2739bcd67f2530a4"
 
 	VAULT_TEST_PASSWORD            = "hallo"
 	VAULT_TEST_TOKEN               = "superrandompasswordtoken"

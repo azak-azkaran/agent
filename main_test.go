@@ -271,7 +271,11 @@ func TestMainSendRequest(t *testing.T) {
 		Addr:    MAIN_TEST_ADDRESS,
 		Handler: router,
 	}
-	go server.ListenAndServe()
+	go func() {
+		err := server.ListenAndServe()
+		assert.Equal(t, http.ErrServerClosed, err)
+	}()
+
 	time.Sleep(100 * time.Millisecond)
 	AgentConfiguration.Address = MAIN_TEST_ADDRESS
 

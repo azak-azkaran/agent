@@ -191,6 +191,7 @@ func TestBackupForget(t *testing.T) {
 	cmd = ForgetRepoDetail(env, pwd, 1, 1, 1)
 	job = CreateJobFromCommand(cmd, "forget")
 	err = job.RunJob(true)
+	assert.NoError(t, err)
 
 	cmd = ListRepo(env, pwd)
 	job = CreateJobFromCommand(cmd, "list")
