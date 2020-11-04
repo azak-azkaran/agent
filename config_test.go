@@ -106,7 +106,11 @@ func TestConfigGetResticConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, seal, ERROR_VAULT_SEALED)
 
-	conf, err := GetResticConfig(testconfig.config, testconfig.token, testconfig.resticpath)
+	conf, err := GetResticConfig(testconfig.config, testconfig.token, "forbidden")
+	assert.Error(t, err)
+	assert.Nil(t, conf)
+
+	conf, err = GetResticConfig(testconfig.config, testconfig.token, testconfig.resticpath)
 	assert.NoError(t, err)
 	assert.NotNil(t, conf.Path)
 	assert.NotNil(t, conf.Password)

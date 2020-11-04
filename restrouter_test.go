@@ -36,6 +36,32 @@ func setupRestrouterTest(t *testing.T) {
 	}
 }
 
+func sendingPost(t *testing.T, endpoint string, statusCode int, msg interface{}) string {
+	reqBody, err := json.Marshal(msg)
+	require.NoError(t, err)
+	fmt.Println("Sending Body:", string(reqBody))
+	resp, err := http.Post(endpoint,
+		"application/json", bytes.NewBuffer(reqBody))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, statusCode, resp.StatusCode)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return string(bodyBytes)
+}
+
+func sendingGet(t *testing.T, endpoint string, statusCode int) string {
+	resp, err := http.Get(endpoint)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+	require.Equal(t, statusCode, resp.StatusCode)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return string(bodyBytes)
+}
+
 func TestRestCreateRestHandler(t *testing.T) {
 	fmt.Println("running: TestRestCreateRestHandler")
 	setupRestrouterTest(t)
@@ -181,6 +207,7 @@ func TestRestPostBackup(t *testing.T) {
 
 func TestRestPostMount(t *testing.T) {
 	fmt.Println("running: TestRestPostMount")
+	t.Cleanup(clear)
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	mountMsg := MountMessage{
@@ -432,28 +459,26 @@ func TestRestPostGit(t *testing.T) {
 	assert.DirExists(t, test_folder)
 }
 
-func sendingPost(t *testing.T, endpoint string, statusCode int, msg interface{}) string {
-	reqBody, err := json.Marshal(msg)
-	require.NoError(t, err)
-	fmt.Println("Sending Body:", string(reqBody))
-	resp, err := http.Post(endpoint,
-		"application/json", bytes.NewBuffer(reqBody))
-	require.NoError(t, err)
-	defer resp.Body.Close()
+func TestRestForbidden(t *testing.T) {
+	fmt.Println("running: TestRestPostBackup")
+	t.Cleanup(clear)
+	forbidden = true
+	setupRestrouterTest(t)
+	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 
-	assert.Equal(t, statusCode, resp.StatusCode)
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	return string(bodyBytes)
-}
+	go fun()
+	time.Sleep(1 * time.Millisecond)
 
-func sendingGet(t *testing.T, endpoint string, statusCode int) string {
-	resp, err := http.Get(endpoint)
-	require.NoError(t, err)
+	msg := BackupMessage{
+		Mode:        "backup",
+		Test:        true,
+		Run:         true,
+		Debug:       true,
+		PrintOutput: true,
+		Token:       "randomtoken",
+	}
+	sendingPost(t, REST_TEST_BACKUP, http.StatusForbidden, msg)
 
-	defer resp.Body.Close()
-	require.Equal(t, statusCode, resp.StatusCode)
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	return string(bodyBytes)
+	err := server.Shutdown(context.Background())
+	assert.NoError(t, err)
 }
