@@ -81,6 +81,7 @@ func createHandler() http.Handler {
 	r.GET("/v1/gocrypt/data/gocryptpath", test_gocrypt)
 	r.GET("/v1/git/data/gitpath", test_git)
 	r.GET("/v1/git/data/vimrc", test_vimrc)
+	r.PUT("/v1/auth/approle/login", test_login)
 	return r
 }
 
@@ -210,4 +211,10 @@ func test_restic(c *gin.Context) {
 	data["data"] = secret
 	msg.Data = data
 	c.JSON(http.StatusOK, msg)
+}
+
+func test_login(c *gin.Context) {
+	log.Println("MOCK-Server: called login")
+	msg := "{\"request_id\":\"requestid\",\"lease_id\":\"\",\"renewable\":false,\"lease_duration\":0,\"data\":null,\"wrap_info\":null,\"warnings\":null,\"auth\":{\"client_token\":\"" + VAULT_TEST_TOKEN + "\",\"accessor\":\"accessorid\",\"policies\":[\"default\",\"secret access\"],\"token_policies\":[\"default\",\"secret access\"],\"metadata\":{\"role_name\":\"agent\"},\"lease_duration\":3600,\"renewable\":true,\"entity_id\":\"entity_id\",\"token_type\":\"service\",\"orphan\":true}}"
+	c.String(http.StatusOK, msg)
 }

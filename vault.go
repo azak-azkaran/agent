@@ -96,3 +96,25 @@ func getDataFromSecret(config *vault.Config, token string, path string) (map[str
 		return secret.Data, nil
 	}
 }
+
+func Login(config *vault.Config, role_id string, secret_id string) (string, error) {
+	client, err := vault.NewClient(config)
+	if err != nil {
+		return "", err
+	}
+
+	// to pass the password
+	options := map[string]interface{}{
+		"secret_id": secret_id,
+		"role_id":   role_id,
+	}
+
+	// PUT call to get a token
+	secret, err := client.Logical().Write("auth/approle/login", options)
+	if err != nil {
+		return "", err
+	}
+
+	token := secret.Auth.ClientToken
+	return token, nil
+}

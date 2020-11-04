@@ -49,6 +49,7 @@ func TestVaultUnseal(t *testing.T) {
 
 func TestVaultSealStatus(t *testing.T) {
 	fmt.Println("running: TestVaultSealStatus")
+	t.Cleanup(clear)
 	testconfig := readConfig(t)
 	multipleKey = true
 	err := Seal(testconfig.config, VAULT_TEST_TOKEN)
@@ -87,4 +88,13 @@ func TestVaultSealStatus(t *testing.T) {
 	assert.False(t, seal.Sealed)
 
 	multipleKey = false
+}
+
+func TestVaultLogin(t *testing.T) {
+	fmt.Println("Testing: TestVaultLogin")
+	t.Cleanup(clear)
+	testconfig := readConfig(t)
+	token, err := Login(testconfig.config, VAULT_TEST_ROLE_ID, VAULT_TEST_SECRET_ID)
+	assert.NoError(t, err)
+	assert.Equal(t, VAULT_TEST_TOKEN, token)
 }

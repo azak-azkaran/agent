@@ -18,13 +18,15 @@ const (
 
 	STORE_ERROR_NOT_DROPED = "Error keys were not dropped."
 
-	MAIN_PATHDB         = "pathdb"
-	MAIN_ADDRESS        = "address"
-	MAIN_TIME_DURATION  = "duration"
-	MAIN_MOUNT_DURATION = "mount_duration"
-	MAIN_MOUNT_ALLOW    = "mount_allow"
-	MAIN_VAULT_KEY_FILE = "vault_key_file"
-	MAIN_VAULT_ADDRESS  = "vault_address"
+	MAIN_PATHDB          = "pathdb"
+	MAIN_ADDRESS         = "address"
+	MAIN_TIME_DURATION   = "duration"
+	MAIN_MOUNT_DURATION  = "mount_duration"
+	MAIN_MOUNT_ALLOW     = "mount_allow"
+	MAIN_VAULT_KEY_FILE  = "vault_key_file"
+	MAIN_VAULT_ADDRESS   = "vault_address"
+	MAIN_VAULT_SECRET_ID = "vault_secret_id"
+	MAIN_VAULT_ROLE_ID   = "vault_role_id"
 
 	MAIN_MESSAGE_NOT_ENOUGH_KEYS  = "Not enough vault keys in storage"
 	MAIN_MESSAGE_START_UNSEAL     = "Starting to unseal Vault"
@@ -100,6 +102,8 @@ const (
 	VAULT_TEST_BACKUP_EXCLUDE_FILE = "~/test/exclude"
 	VAULT_TEST_BACKUP_SECRET_KEY   = "secret.key"
 	VAULT_TEST_BACKUP_ACCESS_KEY   = "access.key"
+	VAULT_TEST_ROLE_ID             = "approleid"
+	VAULT_TEST_SECRET_ID           = "appsecretid"
 
 	MAIN_TEST_ADDRESS        = "localhost:8031"
 	MAIN_TEST_PATHDB         = "./test/DB"

@@ -28,6 +28,9 @@ type Configuration struct {
 	MountAllow       bool
 	MountDuration    string
 	VaultKeyFile     string
+	RoleID           string
+	SecretID         string
+	useLogin         bool
 }
 
 type AgentConfig struct {
@@ -330,6 +333,14 @@ func ParseConfiguration(confi *Configuration) {
 		confi.VaultConfig.Address = viper.GetString(MAIN_VAULT_ADDRESS)
 	}
 
+	if viper.IsSet(MAIN_VAULT_ROLE_ID) {
+		confi.RoleID = viper.GetString(MAIN_VAULT_ROLE_ID)
+	}
+
+	if viper.IsSet(MAIN_VAULT_SECRET_ID) {
+		confi.SecretID = viper.GetString(MAIN_VAULT_SECRET_ID)
+	}
+
 	log.Println("Agent initalzing on: ", confi.Hostname)
 	log.Println("Agent Configuration:",
 		"\nAddress: ", confi.Address,
@@ -340,4 +351,15 @@ func ParseConfiguration(confi *Configuration) {
 		"\nMount Duration: ", confi.MountDuration,
 		"\nMount AllowOther: ", confi.MountAllow,
 	)
+
+	if (confi.RoleID == "" && confi.SecretID == "") || (confi.RoleID == "" && confi.SecretID != "") || (confi.RoleID != "" && confi.SecretID == "") {
+		confi.RoleID = ""
+		confi.SecretID = ""
+		log.Println("Secret ID and Role ID reset")
+		confi.useLogin = false
+	} else {
+		log.Println("RoleID: ", confi.RoleID)
+		log.Println("SecretID: ", confi.SecretID)
+		confi.useLogin = true
+	}
 }

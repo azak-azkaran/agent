@@ -68,6 +68,8 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend.String(MAIN_MOUNT_ALLOW, "true", "If the gocrypt mount should be allowed by other users")
 	addressCommend.String(MAIN_VAULT_KEY_FILE, "", "File in which the vault keys are stored for easy save into Badger database")
 	addressCommend.String(MAIN_VAULT_ADDRESS, "https://localhost:8200", "The address to the vault server")
+	addressCommend.String(MAIN_VAULT_ROLE_ID, "", "Role ID for AppRole login into Vault")
+	addressCommend.String(MAIN_VAULT_SECRET_ID, "", "Secret ID for AppRole login into Vault")
 
 	err := bindEnviorment()
 	if err != nil {
@@ -133,10 +135,19 @@ func CheckKeyFile(path string) error {
 	//return errors.New("Not implemented yet")
 }
 
-func checkRequirementsForBackup() (string, bool) {
+func checkRequirements() (string, bool) {
 	if AgentConfiguration.DB == nil {
 		log.Println(ERROR_DATABASE_NOT_FOUND)
 		return "", false
+	}
+
+	if AgentConfiguration.useLogin {
+		token, err := Login(AgentConfiguration.VaultConfig, AgentConfiguration.RoleID, AgentConfiguration.SecretID)
+		if err != nil {
+			log.Println("Login failed: ", err)
+			return "", false
+		}
+		return token, true
 	}
 
 	ok := CheckToken(AgentConfiguration.DB)
@@ -154,7 +165,7 @@ func checkRequirementsForBackup() (string, bool) {
 }
 
 func CheckBackupRepository() {
-	token, ok := checkRequirementsForBackup()
+	token, ok := checkRequirements()
 	if !ok {
 		return
 	}
@@ -201,7 +212,7 @@ func CheckBackupRepository() {
 }
 
 func mountFolders() {
-	token, ok := checkRequirementsForBackup()
+	token, ok := checkRequirements()
 	if !ok {
 		return
 	}
@@ -227,7 +238,7 @@ func mountFolders() {
 }
 
 func backup() {
-	token, ok := checkRequirementsForBackup()
+	token, ok := checkRequirements()
 	if !ok {
 		return
 	}
@@ -310,7 +321,7 @@ func BackupRepositoryExists(token string) {
 }
 
 func GitCheckout() {
-	token, ok := checkRequirementsForBackup()
+	token, ok := checkRequirements()
 	if !ok {
 		return
 	}
