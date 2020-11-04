@@ -46,6 +46,37 @@ type GitMessage struct {
 	PrintOutput bool   `json:"print"`
 }
 
+func HandleGit(mode string, v GitConfig, run bool, printOutput bool, home string) (bool, error) {
+	var job Job
+	switch mode {
+	case "clone":
+		job = CreateJobFromFunction(func() error {
+			return GitClone(v.Rep, v.Directory, home, v.PersonalToken)
+		}, mode+" "+v.Name)
+	case "pull":
+		job = CreateJobFromFunction(func() error {
+			err := GitCreateRemote(v.Directory, home, v.Rep)
+			if err != nil {
+				return err
+			} else {
+				return GitPull(v.Directory, home, v.PersonalToken)
+			}
+		}, mode+" "+v.Name)
+	default:
+		return false, errors.New("Not supported Mode: " + mode)
+	}
+
+	var err error
+
+	if run {
+		err = job.RunJob(printOutput)
+	} else {
+		err = job.RunJobBackground(printOutput)
+	}
+
+	return err == nil, err
+}
+
 func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, test bool, run bool, c *gin.Context) {
 	job := CreateJobFromCommand(cmd, name)
 	var err error
@@ -380,39 +411,9 @@ func postGit(c *gin.Context) {
 	var buffer bytes.Buffer
 	ok := true
 	for _, v := range config.Git {
-
-		var job Job
-		switch msg.Mode {
-		case "clone":
-			job = CreateJobFromFunction(func() error {
-				return GitClone(v.Rep, v.Directory, config.Agent.HomeFolder, v.PersonalToken)
-			}, msg.Mode+" "+v.Name)
-		case "pull":
-			job = CreateJobFromFunction(func() error {
-				err := GitCreateRemote(v.Directory, config.Agent.HomeFolder, v.Rep)
-				if err != nil {
-					return err
-				} else {
-					return GitPull(v.Directory, config.Agent.HomeFolder, v.PersonalToken)
-				}
-			}, msg.Mode+" "+v.Name)
-		default:
-			returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_GIT, c)
-			return
-		}
-
-		var err error
-
-		if msg.Run {
-			err = job.RunJob(msg.PrintOutput)
-		} else {
-			err = job.RunJobBackground(msg.PrintOutput)
-		}
-
-		if err != nil {
-			ok = false
-			buffer.WriteString("\n")
-			buffer.WriteString(err.Error())
+		ok, err = HandleGit(msg.Mode, v, msg.Run, msg.PrintOutput, config.Agent.HomeFolder)
+		if !ok && err != nil {
+			buffer.WriteString("\nJob: " + v.Name + " " + err.Error())
 		}
 	}
 
