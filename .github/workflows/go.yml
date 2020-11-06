@@ -59,7 +59,6 @@ jobs:
 
     - name: Send coverage
       env:
-        COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=cover.out -service=github
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=cover.out -service="github"
       working-directory: src/github.com/azak-azkaran/agent
