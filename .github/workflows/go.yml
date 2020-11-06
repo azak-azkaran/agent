@@ -23,7 +23,6 @@ jobs:
         sudo apt-get -y install restic
         sudo curl -LO https://github.com/rfjakob/gocryptfs/releases/download/v1.7.1/gocryptfs_v1.7.1_linux-static_amd64.tar.gz
         sudo tar -C /usr/local/bin -xzf gocryptfs_v1.7.1_linux-static_amd64.tar.gz
-        go get github.com/mattn/goveralls
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2  
       
@@ -41,7 +40,12 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
-    - name: Coveralls
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install Coveralls
+      env:
+        GO111MODULE: off
+      run: go get github.com/mattn/goveralls
+
+    - name: Send coverage
+      env:
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=covprofile -service=github
