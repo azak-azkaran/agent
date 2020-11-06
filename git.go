@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"strings"
 
@@ -15,8 +14,8 @@ func GitClone(repo string, dir string, home string, personal string) error {
 	var err error
 
 	dir = strings.ReplaceAll(dir, HOME, home)
-	log.Println("Checkout out to Repo: ", repo)
-	log.Println("Checkout out to Dir: ", dir)
+	Sugar.Info("Checkout out to Repo: ", repo)
+	Sugar.Debug("Checkout out to Dir: ", dir)
 
 	cloneOptions := git.CloneOptions{
 		URL:      repo,
@@ -42,7 +41,7 @@ func GitClone(repo string, dir string, home string, personal string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Checkout out Ref: ", ref)
+	Sugar.Debug("Checkout out Ref: ", ref)
 	return nil
 }
 
@@ -54,7 +53,7 @@ func GitCreateRemote(dir string, home string, repoUrl string) error {
 	}
 	_, err = r.Remote(GIT_REMOTE_NAME)
 	if err != nil && err == git.ErrRemoteNotFound {
-		log.Println("Adding remote: ", GIT_REMOTE_NAME)
+		Sugar.Debug("Adding remote: ", GIT_REMOTE_NAME)
 		_, err = r.CreateRemote(&config.RemoteConfig{
 			Name: GIT_REMOTE_NAME,
 			URLs: []string{repoUrl},
@@ -66,7 +65,7 @@ func GitCreateRemote(dir string, home string, repoUrl string) error {
 
 func GitPull(dir string, home string, personal string) error {
 	path := strings.ReplaceAll(dir, HOME, home)
-	log.Println("Pulling from: ", path)
+	Sugar.Info("Pulling from: ", path)
 	r, err := git.PlainOpen(path)
 	if err != nil {
 		return err
@@ -100,6 +99,6 @@ func GitPull(dir string, home string, personal string) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Checkout out Ref: ", ref)
+	Sugar.Debug("Checkout out Ref: ", ref)
 	return nil
 }

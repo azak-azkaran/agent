@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"strings"
 	"time"
 
@@ -303,7 +302,7 @@ func ParseConfiguration(confi *Configuration) {
 	if viper.IsSet(MAIN_TIME_DURATION) {
 		dur, err := time.ParseDuration(viper.GetString(MAIN_TIME_DURATION))
 		if err != nil {
-			log.Println("Error parsing duration: ", err)
+			Sugar.Error("Error parsing duration: ", err)
 			dur = 30 * time.Minute
 		}
 		confi.TimeBetweenStart = dur
@@ -341,8 +340,8 @@ func ParseConfiguration(confi *Configuration) {
 		confi.SecretID = viper.GetString(MAIN_VAULT_SECRET_ID)
 	}
 
-	log.Println("Agent initalzing on: ", confi.Hostname)
-	log.Println("Agent Configuration:",
+	Sugar.Warn("Agent initalzing on: ", confi.Hostname)
+	Sugar.Info("Agent Configuration:",
 		"\nAddress: ", confi.Address,
 		"\nPath to DB:", confi.PathDB,
 		"\nTime Between Backup Runs: ", confi.TimeBetweenStart,
@@ -355,11 +354,11 @@ func ParseConfiguration(confi *Configuration) {
 	if (confi.RoleID == "" && confi.SecretID == "") || (confi.RoleID == "" && confi.SecretID != "") || (confi.RoleID != "" && confi.SecretID == "") {
 		confi.RoleID = ""
 		confi.SecretID = ""
-		log.Println("Secret ID and Role ID reset")
+		Sugar.Info("Secret ID and Role ID reset")
 		confi.useLogin = false
 	} else {
-		log.Println("RoleID: ", confi.RoleID)
-		log.Println("SecretID: ", confi.SecretID)
+		Sugar.Info("RoleID: ", confi.RoleID)
+		Sugar.Info("SecretID: ", confi.SecretID)
 		confi.useLogin = true
 	}
 }

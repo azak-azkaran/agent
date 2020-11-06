@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,7 +16,7 @@ func MountFolders(home string, config []GocryptConfig) []*exec.Cmd {
 		cmd := mount(home, folderconfig)
 		err := IsEmpty(home, folderconfig.MountPoint)
 		if err != nil {
-			log.Println("ERROR", err)
+			Sugar.Error("ERROR", err)
 		} else {
 			output = append(output, cmd)
 		}
@@ -46,7 +45,7 @@ func MountGocryptfs(cryptoDir string, folder string, home string, duration time.
 
 	command = command + " " + cryptoDir + " " + folder
 
-	log.Println("Mounting: ", folder, " Duration", duration.String(), " AllowOther", allowOther)
+	Sugar.Debug("Mounting: ", folder, " Duration", duration.String(), " AllowOther", allowOther)
 	cmd = exec.Command("bash", "-c", command)
 	cmd.Env = os.Environ()
 	cmd.Stdin = strings.NewReader(pwd)

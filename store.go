@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"errors"
-	"log"
 	"strconv"
 	"time"
 
@@ -18,7 +17,7 @@ var closed = true
 func InitDB(path string, masterkey string, debug bool) *badger.DB {
 	var opt badger.Options
 	if debug {
-		log.Println("Debug is on switching to InMemory")
+		Sugar.Warn("Debug is on switching to InMemory")
 
 		opt = badger.DefaultOptions("").WithInMemory(true)
 	} else {
@@ -31,7 +30,7 @@ func InitDB(path string, masterkey string, debug bool) *badger.DB {
 
 	db, err := badger.Open(opt)
 	if err != nil {
-		log.Println("Error opening database: ", err)
+		Sugar.Error("Error opening database: ", err)
 	}
 	closed = false
 	return db
@@ -139,7 +138,7 @@ func GetToken(db *badger.DB) (string, error) {
 }
 
 func PutToken(db *badger.DB, token string) (bool, error) {
-	log.Println("Adding Token")
+	Sugar.Info("Adding Token")
 	return Put(db, STORE_TOKEN, token)
 }
 
@@ -178,7 +177,7 @@ func DropSealKeys(db *badger.DB) error {
 }
 
 func PutSealKey(db *badger.DB, key string, shares int) (bool, error) {
-	log.Println("Adding seal key, ", shares)
+	Sugar.Info("Adding seal key, ", shares)
 	return Put(db, STORE_KEY+strconv.Itoa(shares), key)
 }
 
@@ -187,7 +186,7 @@ func GetSealKey(db *badger.DB, threshold int, totalShares int) []string {
 	_, err := crypto_rand.Read(b[:])
 	var values []string
 	if err != nil {
-		log.Println("cannot seed math/rand package with cryptographically secure random number generator")
+		Sugar.Error("cannot seed math/rand package with cryptographically secure random number generator")
 		return values
 	}
 
@@ -198,7 +197,7 @@ func GetSealKey(db *badger.DB, threshold int, totalShares int) []string {
 		v := permutation[i] + 1
 		value, err := Get(db, STORE_KEY+strconv.Itoa(v))
 		if err != nil {
-			log.Println(ERROR_KEY_NOT_FOUND, err)
+			Sugar.Error(ERROR_KEY_NOT_FOUND, err)
 		} else {
 			values = append(values, value)
 		}

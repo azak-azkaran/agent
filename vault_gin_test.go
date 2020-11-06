@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -25,7 +24,7 @@ var Hostname string
 
 func StartServer(t *testing.T, address string) {
 	if running {
-		log.Println("Server already running")
+		Sugar.Info("Server already running")
 		return
 	}
 	gin.SetMode(gin.TestMode)
@@ -35,7 +34,7 @@ func StartServer(t *testing.T, address string) {
 	}
 	go func() {
 		running = true
-		log.Println("Starting MOCK server at: ", server.Addr)
+		Sugar.Info("Starting MOCK server at: ", server.Addr)
 		err := server.ListenAndServe()
 		require.Equal(t, http.ErrServerClosed, err)
 		running = false
@@ -45,11 +44,11 @@ func StartServer(t *testing.T, address string) {
 }
 
 func StopServer() {
-	log.Println("stopping server")
+	Sugar.Info("stopping server")
 	if running {
 		err := server.Shutdown(context.Background())
 		if err != nil {
-			log.Fatal(err)
+			Sugar.Fatal(err)
 		}
 	}
 	time.Sleep(1 * time.Millisecond)
@@ -60,7 +59,7 @@ func createHandler() http.Handler {
 	r.GET("/v1/sys/seal-status", test_seal_status)
 	r.PUT("/v1/sys/unseal", test_unseal)
 	r.PUT("/v1/sys/seal", func(c *gin.Context) {
-		log.Println("MOCK-Server: called seal")
+		Sugar.Info("MOCK-Server: called seal")
 		sealStatus = true
 		c.JSON(http.StatusOK, nil)
 	})
@@ -73,7 +72,7 @@ func createHandler() http.Handler {
 			test_config(c)
 			return
 		}
-		log.Println("MOCK-Server: invalid config")
+		Sugar.Info("MOCK-Server: invalid config")
 		var arr []string
 		c.JSON(404, gin.H{"error": arr})
 	})
@@ -86,7 +85,7 @@ func createHandler() http.Handler {
 }
 
 func test_gocrypt(c *gin.Context) {
-	log.Println("MOCK-Server: called gocrypt")
+	Sugar.Info("MOCK-Server: called gocrypt")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 	secret := make(map[string]interface{})
@@ -102,13 +101,13 @@ func test_gocrypt(c *gin.Context) {
 }
 
 func test_config(c *gin.Context) {
-	log.Println("MOCK-Server: called config")
+	Sugar.Info("MOCK-Server: called config")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Println(err)
+		Sugar.Error(err)
 	}
 
 	if forbidden {
@@ -124,7 +123,7 @@ func test_config(c *gin.Context) {
 }
 
 func test_vimrc(c *gin.Context) {
-	log.Println("MOCK-Server: called git")
+	Sugar.Info("MOCK-Server: called git")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 
@@ -136,7 +135,7 @@ func test_vimrc(c *gin.Context) {
 }
 
 func test_git(c *gin.Context) {
-	log.Println("MOCK-Server: called git")
+	Sugar.Info("MOCK-Server: called git")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 
@@ -148,7 +147,7 @@ func test_git(c *gin.Context) {
 }
 
 func test_seal_status(c *gin.Context) {
-	log.Println("MOCK-Server: called seal-status")
+	Sugar.Info("MOCK-Server: called seal-status")
 	var msg vault.SealStatusResponse
 	if multipleKey {
 		msg.T = 3
@@ -165,7 +164,7 @@ func test_seal_status(c *gin.Context) {
 }
 
 func test_unseal(c *gin.Context) {
-	log.Println("MOCK-Server: called unseal")
+	Sugar.Info("MOCK-Server: called unseal")
 	var msg vault.SealStatusResponse
 
 	if multipleKey {
@@ -188,7 +187,7 @@ func test_unseal(c *gin.Context) {
 }
 
 func test_forbidden(c *gin.Context) {
-	log.Println("MOCK-Server: called forbidden")
+	Sugar.Info("MOCK-Server: called forbidden")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 	secret := make(map[string]string)
@@ -198,7 +197,7 @@ func test_forbidden(c *gin.Context) {
 }
 
 func test_restic(c *gin.Context) {
-	log.Println("MOCK-Server: called resticpath")
+	Sugar.Info("MOCK-Server: called resticpath")
 	var msg vault.Secret
 	data := make(map[string]interface{})
 	secret := make(map[string]string)
@@ -214,7 +213,7 @@ func test_restic(c *gin.Context) {
 }
 
 func test_login(c *gin.Context) {
-	log.Println("MOCK-Server: called login")
+	Sugar.Info("MOCK-Server: called login")
 	msg := "{\"request_id\":\"requestid\",\"lease_id\":\"\",\"renewable\":false,\"lease_duration\":0,\"data\":null,\"wrap_info\":null,\"warnings\":null,\"auth\":{\"client_token\":\"" + VAULT_TEST_TOKEN + "\",\"accessor\":\"accessorid\",\"policies\":[\"default\",\"secret access\"],\"token_policies\":[\"default\",\"secret access\"],\"metadata\":{\"role_name\":\"agent\"},\"lease_duration\":3600,\"renewable\":true,\"entity_id\":\"entity_id\",\"token_type\":\"service\",\"orphan\":true}}"
 	c.String(http.StatusOK, msg)
 }

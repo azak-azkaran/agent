@@ -2,7 +2,7 @@ VERSION := $(shell git describe --always --long --dirty)
 all: install
 
 fetch:
-	go get ./...
+	go mod download
 
 install: fetch
 	@echo Installing to ${GOPATH}/bin

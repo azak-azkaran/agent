@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"testing"
@@ -83,11 +82,11 @@ func TestJobQueueStatus(t *testing.T) {
 	job := CreateJobFromCommand(cmd, "test1")
 	var infoBuffer bytes.Buffer
 
-	log.SetOutput(&infoBuffer)
+	GetLogger().SetOutput(&infoBuffer)
 	job.QueueStatus()
 
 	assert.NotEmpty(t, infoBuffer)
 
-	log.SetOutput(os.Stdout)
-	log.Println("test: ", infoBuffer.String())
+	GetLogger().SetOutput(os.Stdout)
+	Sugar.Info("test: ", infoBuffer.String())
 }

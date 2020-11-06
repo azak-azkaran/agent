@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"log"
 	"os/exec"
 
 	cmap "github.com/orcaman/concurrent-map"
@@ -20,9 +19,21 @@ type Job struct {
 	finished    bool
 }
 
-func Log(toQueue string, p bool) {
-	if p {
-		log.Println("INFO: " + toQueue)
+func LogJobStatus(job *Job) {
+	if !job.printOutput {
+		return
+	}
+
+	if job.Stdout.Len() > 0 {
+		Sugar.Info(job.Stdout.String())
+	} else {
+		Sugar.Info("No Output in stdout")
+	}
+
+	if job.Stderr.Len() > 0 {
+		Sugar.Info(job.Stderr.String())
+	} else {
+		Sugar.Info("No Output in stderr")
 	}
 }
 
@@ -33,21 +44,10 @@ func (job *Job) IsFinished() bool {
 func (job *Job) QueueStatus() {
 	job.finished = true
 	if job.Cmd != nil && job.Cmd.Process == nil {
-		log.Println("Process not found")
+		Sugar.Info("Process not found")
 		return
 	}
-
-	if job.Stdout.Len() > 0 {
-		Log(job.Stdout.String(), job.printOutput)
-	} else {
-		Log("No Output in stdout", job.printOutput)
-	}
-
-	if job.Stderr.Len() > 0 {
-		Log(job.Stderr.String(), job.printOutput)
-	} else {
-		Log("No Output in stderr", job.printOutput)
-	}
+	LogJobStatus(job)
 }
 
 func CreateJobFromFunction(f func() error, name string) Job {
@@ -75,7 +75,7 @@ func CreateJobFromCommand(cmd *exec.Cmd, name string) Job {
 		if ok {
 			oldCmd := v.(*Job)
 			if oldCmd.Cmd.Process != nil {
-				log.Println("Found job:", name, "\tPID: ", oldCmd.Cmd.Process.Pid)
+				Sugar.Info("Found job:", name, "\tPID: ", oldCmd.Cmd.Process.Pid)
 			}
 		}
 	}
@@ -96,7 +96,7 @@ func CreateJobFromCommand(cmd *exec.Cmd, name string) Job {
 
 func (job *Job) RunJob(printOutput bool) error {
 	job.printOutput = printOutput
-	log.Println("Starting job: ", job.Name)
+	Sugar.Info("Starting job: ", job.Name)
 	return job.doJob()
 }
 
@@ -109,12 +109,11 @@ func (job *Job) doJob() error {
 
 func (job *Job) RunJobBackground(printOutput bool) error {
 	go func() {
-		log.Println("Starting job in background: ", job.Name)
+		Sugar.Info("Starting job in background: ", job.Name)
 		job.printOutput = printOutput
 		err := job.doJob()
 		if err != nil {
-			log.Println("ERROR: ", err)
-			log.Println(job.Stderr.String())
+			Sugar.Error("ERROR: ", err, "\n", job.Stderr.String())
 		}
 	}()
 	return nil
@@ -124,9 +123,9 @@ func (job *Job) DontRun(printOutput bool) error {
 	job.printOutput = printOutput
 
 	if job.Cmd != nil {
-		log.Println("Not Runing: ", job.Cmd)
+		Sugar.Info("Not Runing: ", job.Cmd)
 	} else {
-		log.Println("Not Runing: ", job.Name)
+		Sugar.Info("Not Runing: ", job.Name)
 	}
 
 	job.QueueStatus()

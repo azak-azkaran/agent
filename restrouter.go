@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"log"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -100,11 +99,11 @@ func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, test bool, run b
 
 func handleError(job Job, err error, errMsg string, buffer bytes.Buffer) bool {
 	if err != nil {
-		m := ERROR_PREFIX + errMsg + err.Error()
+		m := errMsg + err.Error()
 		if job.Stderr != nil {
 			m = "\t" + job.Stderr.String()
 		}
-		log.Println(m)
+		Sugar.Error(m)
 		buffer.WriteString(m)
 		return false
 	}
@@ -139,17 +138,17 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool,
 	}
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			JSON_MESSAGE: buffer.String(),
+			REST_JSON_MESSAGE: buffer.String(),
 		})
 	} else {
 		c.JSON(http.StatusOK, gin.H{
-			JSON_MESSAGE: buffer.String(),
+			REST_JSON_MESSAGE: buffer.String(),
 		})
 	}
 }
 
 func returnErr(err error, source string, c *gin.Context) {
-	log.Println(ERROR_PREFIX+source, err.Error())
+	Sugar.Error(source, err.Error())
 
 	var code int
 	if source == ERROR_CONFIG {
@@ -158,14 +157,14 @@ func returnErr(err error, source string, c *gin.Context) {
 		code = http.StatusInternalServerError
 	}
 	c.JSON(code, gin.H{
-		JSON_MESSAGE: err.Error(),
+		REST_JSON_MESSAGE: err.Error(),
 	})
 }
 
 func postUnseal(c *gin.Context) {
 	var msg TokenMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -175,16 +174,16 @@ func postUnseal(c *gin.Context) {
 		return
 	}
 
-	log.Println("INFO: Vault seal is: ", resp.Sealed)
+	Sugar.Info(REST_VAULT_SEAL_MESSAGE, resp.Sealed)
 	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: resp.Sealed,
+		REST_JSON_MESSAGE: resp.Sealed,
 	})
 }
 
 func postSeal(c *gin.Context) {
 	var msg TokenMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -196,9 +195,9 @@ func postSeal(c *gin.Context) {
 	}
 
 	AgentConfiguration.Token = msg.Token
-	log.Println("INFO: Vault Sealed")
+	Sugar.Info("Vault Sealed")
 	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: true,
+		REST_JSON_MESSAGE: true,
 	})
 }
 
@@ -209,16 +208,16 @@ func getIsSealed(c *gin.Context) {
 		return
 	}
 
-	log.Println("INFO: Vault seal is: ", b)
+	Sugar.Info(REST_VAULT_SEAL_MESSAGE, b)
 	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: b,
+		REST_JSON_MESSAGE: b,
 	})
 }
 
 func getLog(c *gin.Context) {
-	log.Println("INFO: Log: ", "not implemented")
+	Sugar.Info("Log: ", "not implemented")
 	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: "not implemented",
+		REST_JSON_MESSAGE: "not implemented",
 	})
 }
 
@@ -241,16 +240,16 @@ func getStatus(c *gin.Context) {
 		buffer.WriteString("No Job started")
 	}
 
-	log.Println("INFO: Get Status: ", buffer.String())
+	Sugar.Info("Get Status: ", buffer.String())
 	c.JSON(http.StatusOK, gin.H{
-		JSON_MESSAGE: buffer.String(),
+		REST_JSON_MESSAGE: buffer.String(),
 	})
 }
 
 func postMount(c *gin.Context) {
 	var msg MountMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -269,9 +268,9 @@ func postMount(c *gin.Context) {
 	out := MountFolders(config.Agent.HomeFolder, config.Gocrypt)
 
 	if msg.Debug {
-		log.Println("Config", config.Gocrypt)
+		Sugar.Debug("Config", config.Gocrypt)
 		for k, v := range out {
-			log.Println("Command", k, ": ", v.String())
+			Sugar.Info("Command", k, ": ", v.String())
 		}
 	}
 	var buffer bytes.Buffer
@@ -282,7 +281,7 @@ func postMount(c *gin.Context) {
 func postBackup(c *gin.Context) {
 	var msg BackupMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -326,8 +325,8 @@ func postBackup(c *gin.Context) {
 		return
 	}
 	if msg.Debug {
-		log.Println("Command: ", cmd.String())
-		log.Println("Config", config.Restic)
+		Sugar.Debug("Command: ", cmd.String())
+		Sugar.Info("Config", config.Restic)
 	}
 
 	HandleBackup(cmd, msg.Mode, msg.PrintOutput, msg.Test, msg.Run, c)
@@ -337,7 +336,7 @@ func postBackup(c *gin.Context) {
 func postToken(c *gin.Context) {
 	var msg TokenMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -370,7 +369,7 @@ func getToken(c *gin.Context) {
 func postUnsealKey(c *gin.Context) {
 	var msg VaultKeyMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -390,7 +389,7 @@ func postUnsealKey(c *gin.Context) {
 func postGit(c *gin.Context) {
 	var msg GitMessage
 	if err := c.BindJSON(&msg); err != nil {
-		log.Println(ERROR_BINDING, err.Error())
+		returnErr(err, ERROR_BINDING, c)
 		return
 	}
 
@@ -417,11 +416,11 @@ func postGit(c *gin.Context) {
 
 	if ok {
 		c.JSON(http.StatusOK, gin.H{
-			JSON_MESSAGE: buffer.String(),
+			REST_JSON_MESSAGE: buffer.String(),
 		})
 	} else {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			JSON_MESSAGE: buffer.String(),
+			REST_JSON_MESSAGE: buffer.String(),
 		})
 	}
 }
@@ -434,9 +433,9 @@ func RunRestServer(address string) (*http.Server, func()) {
 	fun := func() {
 		err := server.ListenAndServe()
 		if err == http.ErrServerClosed {
-			log.Println("Agent server closed happily...")
+			Sugar.Info("Agent server closed happily...")
 		} else if err != nil {
-			log.Println("Agent server closed horribly...\n", err)
+			Sugar.Error("Agent server closed horribly...\n", err)
 		}
 	}
 	return server, fun
@@ -446,7 +445,7 @@ func CreateRestHandler() http.Handler {
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			JSON_MESSAGE: "pong",
+			REST_JSON_MESSAGE: "pong",
 		})
 	})
 

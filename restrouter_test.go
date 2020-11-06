@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -218,7 +217,7 @@ func TestRestPostMount(t *testing.T) {
 	}
 	go fun()
 	time.Sleep(1 * time.Millisecond)
-	log.Println("Agent rest server startet on: ", server.Addr)
+	Sugar.Info("Agent rest server startet on: ", server.Addr)
 	reqBody, err := json.Marshal(mountMsg)
 	require.NoError(t, err)
 
@@ -276,7 +275,7 @@ func TestRestStatus(t *testing.T) {
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
-	log.Println("Agent rest server startet on: ", server.Addr)
+	Sugar.Info("Agent rest server startet on: ", server.Addr)
 
 	reqBody, err := json.Marshal(backupMsg)
 	require.NoError(t, err)
@@ -322,7 +321,7 @@ func TestRestGetLog(t *testing.T) {
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
-	log.Println("Agent rest server startet on: ", server.Addr)
+	Sugar.Info("Agent rest server startet on: ", server.Addr)
 
 	reqBody, err := json.Marshal(backupMsg)
 	require.NoError(t, err)
@@ -416,7 +415,7 @@ func TestRestBindings(t *testing.T) {
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	go fun()
 	time.Sleep(1 * time.Millisecond)
-	log.Println("Agent rest server startet on: ", server.Addr)
+	Sugar.Info("Agent rest server startet on: ", server.Addr)
 
 	msg := DummyMessage{
 		Message: "test",
@@ -439,7 +438,7 @@ func TestRestPostGit(t *testing.T) {
 
 	go fun()
 	time.Sleep(1 * time.Millisecond)
-	log.Println("Agent rest server startet on: ", server.Addr)
+	Sugar.Info("Agent rest server startet on: ", server.Addr)
 
 	mountMsg := GitMessage{
 		Mode:        "clone",

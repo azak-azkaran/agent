@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/viper"
 
 	"errors"
-	"log"
 	"os"
 	"os/signal"
 	"time"
@@ -137,14 +136,14 @@ func CheckKeyFile(path string) error {
 
 func checkRequirements() (string, bool) {
 	if AgentConfiguration.DB == nil {
-		log.Println(ERROR_DATABASE_NOT_FOUND)
+		Sugar.Error(ERROR_DATABASE_NOT_FOUND)
 		return "", false
 	}
 
 	if AgentConfiguration.useLogin {
 		token, err := Login(AgentConfiguration.VaultConfig, AgentConfiguration.RoleID, AgentConfiguration.SecretID)
 		if err != nil {
-			log.Println("Login failed: ", err)
+			Sugar.Error("Login failed: ", err)
 			return "", false
 		}
 		return token, true
@@ -152,13 +151,13 @@ func checkRequirements() (string, bool) {
 
 	ok := CheckToken(AgentConfiguration.DB)
 	if !ok {
-		log.Println("Token is not set")
+		Sugar.Warn("Token is not set")
 		return "", false
 	}
 
 	token, err := GetToken(AgentConfiguration.DB)
 	if err != nil {
-		log.Println("Read token failed: ", err)
+		Sugar.Error("Read token failed: ", err)
 		return "", false
 	}
 	return token, true
@@ -172,13 +171,13 @@ func CheckBackupRepository() {
 
 	t, err := GetTimestamp(AgentConfiguration.DB)
 	if err != nil {
-		log.Println(ERROR_TIMESTAMP, err)
+		Sugar.Error(ERROR_TIMESTAMP, err)
 	}
-	log.Println("Last Backup Check: ", t.String())
+	Sugar.Debug("Last Backup Check: ", t.String())
 
 	t = t.Add(12 * time.Hour)
 	now := time.Now()
-	log.Println("Next Backup Check after: ", t.String())
+	Sugar.Info("Next Backup Check after: ", t.String())
 	if now.After(t) {
 		BackupRepositoryExists(token)
 		backupMsg := BackupMessage{
@@ -190,7 +189,7 @@ func CheckBackupRepository() {
 
 		reqBody, err := json.Marshal(backupMsg)
 		if err != nil {
-			log.Println(ERROR_UNMARSHAL, err)
+			Sugar.Error(ERROR_UNMARSHAL, err)
 			return
 		}
 
@@ -201,12 +200,12 @@ func CheckBackupRepository() {
 		if ok {
 			_, err = UpdateTimestamp(AgentConfiguration.DB, time.Now())
 			if err != nil {
-				log.Println(err)
+				Sugar.Error(err)
 			}
 			return
 		}
 	} else {
-		log.Println(MAIN_MESSAGE_BACKUP_ALREADY, t.String())
+		Sugar.Info(MAIN_MESSAGE_BACKUP_ALREADY, t.String())
 	}
 
 }
@@ -224,7 +223,7 @@ func mountFolders() {
 
 	reqBody, err := json.Marshal(mountMsg)
 	if err != nil {
-		log.Println(ERROR_UNMARSHAL, err)
+		Sugar.Error(ERROR_UNMARSHAL, err)
 		return
 	}
 
@@ -245,13 +244,13 @@ func backup() {
 
 	t, err := GetLastBackup(AgentConfiguration.DB)
 	if err != nil {
-		log.Println(ERROR_TIMESTAMP, err)
+		Sugar.Error(ERROR_TIMESTAMP, err)
 	}
-	log.Println("Last Backup: ", t.String())
+	Sugar.Debug("Last Backup: ", t.String())
 
 	t = t.Add(2 * time.Hour)
 	now := time.Now()
-	log.Println("Next Backup after: ", t.String())
+	Sugar.Info("Next Backup after: ", t.String())
 	if now.After(t) {
 		BackupRepositoryExists(token)
 		backupMsg := BackupMessage{
@@ -263,7 +262,7 @@ func backup() {
 
 		reqBody, err := json.Marshal(backupMsg)
 		if err != nil {
-			log.Println(ERROR_UNMARSHAL, err)
+			Sugar.Error(ERROR_UNMARSHAL, err)
 			return
 		}
 
@@ -272,7 +271,7 @@ func backup() {
 			return
 		}
 		if ok {
-			log.Println(MAIN_MESSAGE_BACKUP_SUCCESS)
+			Sugar.Info(MAIN_MESSAGE_BACKUP_SUCCESS)
 			UpdateLastBackup(AgentConfiguration.DB, time.Now())
 			return
 		}
@@ -290,7 +289,7 @@ func BackupRepositoryExists(token string) {
 
 	reqBody, err := json.Marshal(backupMsg)
 	if err != nil {
-		log.Println(ERROR_UNMARSHAL, err)
+		Sugar.Error(ERROR_UNMARSHAL, err)
 		return
 	}
 	ok, err := SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
@@ -301,18 +300,18 @@ func BackupRepositoryExists(token string) {
 		return
 	}
 
-	log.Println(MAIN_MESSAGE_BACKUP_INIT)
+	Sugar.Info(MAIN_MESSAGE_BACKUP_INIT)
 	backupMsg.Mode = "init"
 	backupMsg.PrintOutput = true
 	reqBody, err = json.Marshal(backupMsg)
 	if err != nil {
-		log.Println(ERROR_UNMARSHAL, err)
+		Sugar.Error(ERROR_UNMARSHAL, err)
 		return
 	}
 
 	ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
 	if err != nil {
-		log.Println(err)
+		Sugar.Error(err)
 		return
 	}
 	if ok {
@@ -335,13 +334,13 @@ func GitCheckout() {
 
 	reqBody, err := json.Marshal(msg)
 	if err != nil {
-		log.Println(ERROR_UNMARSHAL, err)
+		Sugar.Error(ERROR_UNMARSHAL, err)
 		return
 	}
 
 	ok, err = SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
 	if err != nil {
-		log.Println("Error:", err)
+		Sugar.Error("Error:", err)
 		return
 	}
 	if ok {
@@ -350,7 +349,7 @@ func GitCheckout() {
 		msg.Mode = "pull"
 		reqBody, err := json.Marshal(msg)
 		if err != nil {
-			log.Println(ERROR_UNMARSHAL, err)
+			Sugar.Error(ERROR_UNMARSHAL, err)
 			return
 		}
 
@@ -360,27 +359,27 @@ func GitCheckout() {
 }
 
 func Start() {
-	log.Println("Waking from Sleep")
+	Sugar.Warn("Waking from Sleep")
 	mountFolders()
 	GitCheckout()
 	backup()
 	CheckBackupRepository()
 
-	log.Println("Going to Sleep")
+	Sugar.Warn("Going to Sleep")
 }
 
 func unsealVault(seal *vault.SealStatusResponse) {
 	if CheckSealKey(AgentConfiguration.DB, seal.N) {
-		log.Println(MAIN_MESSAGE_START_UNSEAL)
+		Sugar.Warn(MAIN_MESSAGE_START_UNSEAL)
 		values := GetSealKey(AgentConfiguration.DB, seal.T, seal.N)
 		for _, v := range values {
 			_, err := Unseal(AgentConfiguration.VaultConfig, v)
 			if err != nil {
-				log.Println(MAIN_ERROR_UNSEAL, err)
+				Sugar.Error(MAIN_ERROR_UNSEAL, err)
 			}
 		}
 	} else {
-		log.Println(MAIN_MESSAGE_NOT_ENOUGH_KEYS)
+		Sugar.Warn(MAIN_MESSAGE_NOT_ENOUGH_KEYS)
 
 	}
 }
@@ -388,11 +387,11 @@ func unsealVault(seal *vault.SealStatusResponse) {
 func run() {
 	seal, err := SealStatus(AgentConfiguration.VaultConfig)
 	if err != nil {
-		log.Println(MAIN_ERROR_CHECK_SEAL, err)
+		Sugar.Error(MAIN_ERROR_CHECK_SEAL, err)
 	} else {
 
 		if seal.Sealed {
-			log.Println(ERROR_VAULT_SEALED)
+			Sugar.Error(ERROR_VAULT_SEALED)
 			unsealVault(seal)
 		}
 		Start()
@@ -405,7 +404,7 @@ func SendRequest(reqBody []byte, endpoint string) (bool, error) {
 	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+endpoint,
 		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
 	if err != nil {
-		log.Println(ERROR_SENDING_REQUEST, err)
+		Sugar.Error(ERROR_SENDING_REQUEST, err)
 		return false, err
 	}
 	defer resp.Body.Close()
@@ -413,11 +412,11 @@ func SendRequest(reqBody []byte, endpoint string) (bool, error) {
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Println(ERROR_READING_RESPONSE, err)
+			Sugar.Error(ERROR_READING_RESPONSE, err)
 			return false, err
 		}
 		bodyString := string(bodyBytes)
-		log.Println("Error while sending to:", endpoint, ": ", bodyString)
+		Sugar.Error("Error while sending to:", endpoint, ": ", bodyString)
 		return false, nil
 	}
 	return true, nil
@@ -428,7 +427,7 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt)
 	go func() {
 		<-stopChan
-		log.Println("Stopping Agent Happly")
+		Sugar.Warn("Stopping Agent Happly")
 		if AgentConfiguration.Timer != nil {
 			AgentConfiguration.Timer.Stop()
 		}
@@ -439,15 +438,13 @@ func main() {
 
 		err := restServerAgent.Shutdown(context.Background())
 		if err != nil {
-			log.Println(MAIN_ERROR_SHUTDOWN, err)
+			Sugar.Error(MAIN_ERROR_SHUTDOWN, err)
 		}
 	}()
 	err := Init(vault.DefaultConfig(), os.Args)
 
-	//log.Print("Please enter Token: ")
-	//password, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		log.Println("ERROR", err)
+		Sugar.Error("ERROR", err)
 	}
 	AgentConfiguration.DB = InitDB(AgentConfiguration.PathDB, "", false)
 
@@ -455,17 +452,17 @@ func main() {
 		err = CheckKeyFile(AgentConfiguration.VaultKeyFile)
 
 		if err != nil {
-			log.Println("ERROR", err)
+			Sugar.Error("ERROR", err)
 		}
 	}
 	var fun func()
 	restServerAgent, fun = RunRestServer(AgentConfiguration.Address)
 
 	go func() {
-		log.Println(MAIN_MESSAGE_START_RUNNING, "\t", AgentConfiguration.Hostname)
+		Sugar.Info(MAIN_MESSAGE_START_RUNNING, "\t", AgentConfiguration.Hostname)
 		AgentConfiguration.Timer = time.AfterFunc(5*time.Second, run)
 	}()
 
-	log.Println(MAIN_MESSAGE_START_RESTSERVER)
+	Sugar.Debug(MAIN_MESSAGE_START_RESTSERVER)
 	fun()
 }
