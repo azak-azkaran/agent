@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -71,22 +69,4 @@ func TestJobRunJob(t *testing.T) {
 	j = v.(*Job)
 	assert.Equal(t, "TEST=hallo\n", j.Stdout.String())
 	assert.Equal(t, "", j.Stderr.String())
-}
-
-func TestJobQueueStatus(t *testing.T) {
-	fmt.Println("running: TestJobQueueStatus")
-	t.Cleanup(clear)
-
-	cmd := exec.Command("echo", "hallo")
-
-	job := CreateJobFromCommand(cmd, "test1")
-	var infoBuffer bytes.Buffer
-
-	GetLogger().SetOutput(&infoBuffer)
-	job.QueueStatus()
-
-	assert.NotEmpty(t, infoBuffer)
-
-	GetLogger().SetOutput(os.Stdout)
-	Sugar.Info("test: ", infoBuffer.String())
 }

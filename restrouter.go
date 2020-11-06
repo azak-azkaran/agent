@@ -442,7 +442,10 @@ func RunRestServer(address string) (*http.Server, func()) {
 }
 
 func CreateRestHandler() http.Handler {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.LoggerWithConfig(*logconfig))
+	r.Use(gin.Recovery())
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			REST_JSON_MESSAGE: "pong",

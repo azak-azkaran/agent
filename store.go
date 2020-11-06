@@ -14,14 +14,32 @@ import (
 
 var closed = true
 
+type defaultLog struct{}
+
+func (l *defaultLog) Errorf(f string, v ...interface{}) {
+	Sugar.Errorf(f, v...)
+}
+
+func (l *defaultLog) Infof(f string, v ...interface{}) {
+	Sugar.Infof(f, v...)
+}
+
+func (l *defaultLog) Debugf(f string, v ...interface{}) {
+	Sugar.Debugf(f, v...)
+}
+func (l *defaultLog) Warningf(f string, v ...interface{}) {
+	Sugar.Warnf(f, v...)
+}
+
 func InitDB(path string, masterkey string, debug bool) *badger.DB {
 	var opt badger.Options
+
 	if debug {
 		Sugar.Warn("Debug is on switching to InMemory")
 
-		opt = badger.DefaultOptions("").WithInMemory(true)
+		opt = badger.DefaultOptions("").WithInMemory(true).WithLogger(&defaultLog{})
 	} else {
-		opt = badger.DefaultOptions(path)
+		opt = badger.DefaultOptions(path).WithLogger(&defaultLog{})
 	}
 
 	if masterkey != "" {
