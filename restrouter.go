@@ -77,10 +77,13 @@ func postUnseal(c *gin.Context) {
 		return
 	}
 
-	if err := DoUnseal(msg.Token); err != nil {
+	sealed, err := DoUnseal(msg.Token)
+	if  err != nil {
 		returnErr(err, ERROR_UNSEAL, c)
 	}
-	c.JSON(http.StatusOK, gin.H{})
+	c.JSON(http.StatusOK, gin.H{
+		REST_JSON_MESSAGE: sealed,
+	})
 }
 
 func postSeal(c *gin.Context) {
@@ -173,13 +176,13 @@ func postBackup(c *gin.Context) {
 		returnErr(err, ERROR_BINDING, c)
 		return
 	}
-	
-	if err := DoBackup(msg.Token, msg.Mode, msg.PrintOutput, msg.Debug, msg.Test, msg.Run) ;err != nil {
+
+	if err := DoBackup(msg.Token, msg.Mode, msg.PrintOutput, msg.Debug, msg.Test, msg.Run); err != nil {
 		returnErr(err, ERROR_RUNBACKUP, c)
 	} else {
 		c.JSON(http.StatusOK, gin.H{})
 	}
-	}
+}
 
 func postUnsealKey(c *gin.Context) {
 	var msg VaultKeyMessage
@@ -208,36 +211,15 @@ func postGit(c *gin.Context) {
 		return
 	}
 
-	config, err := CreateConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	str, err := DoGit(msg.Token, msg.Mode, msg.Run, msg.PrintOutput)
 	if err != nil {
-		returnErr(err, ERROR_CONFIG, c)
+		returnErr(err, ERROR_GIT, c)
 		return
 	}
 
-	err = config.GetGitConfig()
-	if err != nil {
-		returnErr(err, ERROR_CONFIG, c)
-		return
-	}
-
-	var buffer bytes.Buffer
-	ok := true
-	for _, v := range config.Git {
-		ok, err = HandleGit(msg.Mode, v, msg.Run, msg.PrintOutput, config.Agent.HomeFolder)
-		if !ok && err != nil {
-			buffer.WriteString("\nJob: " + v.Name + " " + err.Error())
-		}
-	}
-
-	if ok {
-		c.JSON(http.StatusOK, gin.H{
-			REST_JSON_MESSAGE: buffer.String(),
-		})
-	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			REST_JSON_MESSAGE: buffer.String(),
-		})
-	}
+	c.JSON(http.StatusOK, gin.H{
+		REST_JSON_MESSAGE: str,
+	})
 }
 
 func RunRestServer(address string) (*http.Server, func()) {

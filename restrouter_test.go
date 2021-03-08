@@ -387,7 +387,6 @@ func TestRestBindings(t *testing.T) {
 	msg := DummyMessage{
 		Message: "test",
 	}
-	sendingPost(t, REST_TEST_TOKEN, http.StatusBadRequest, msg)
 	sendingPost(t, REST_TEST_UNSEAL_KEY, http.StatusBadRequest, msg)
 	sendingPost(t, REST_TEST_UNSEAL, http.StatusBadRequest, msg)
 	sendingPost(t, REST_TEST_BACKUP, http.StatusBadRequest, msg)
@@ -443,7 +442,7 @@ func TestRestForbidden(t *testing.T) {
 		PrintOutput: true,
 		Token:       "randomtoken",
 	}
-	sendingPost(t, REST_TEST_BACKUP, http.StatusForbidden, msg)
+	sendingPost(t, REST_TEST_BACKUP, http.StatusInternalServerError, msg)
 
 	err := server.Shutdown(context.Background())
 	assert.NoError(t, err)

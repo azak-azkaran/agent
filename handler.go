@@ -83,13 +83,13 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool)
 
 }
 
-func DoUnseal(token string) error {
+func DoUnseal(token string) (bool,error ) {
 	resp, err := Unseal(AgentConfiguration.VaultConfig, token)
 	if err != nil {
-		return err
+		return false,err
 	}
 	Sugar.Info(REST_VAULT_SEAL_MESSAGE, resp.Sealed)
-	return nil
+	return resp.Sealed, nil
 }
 
 func DoMount(token string, debug bool, printOutput bool, test bool, run bool) (string, error) {
@@ -159,6 +159,27 @@ func DoBackup(token string, mode string, printOutput bool, debug bool, test bool
 		Sugar.Debug("Command: ", cmd.String())
 		Sugar.Info("Config", config.Restic)
 	}
-
 	return HandleBackup(cmd, mode, printOutput, test, run)
+}
+
+func DoGit(token string, mode string, run bool, printOutput bool) ( string,error ){
+	config, err := CreateConfigFromVault(token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	if err != nil {
+		return "",err
+	}
+
+	err = config.GetGitConfig()
+	if err != nil {
+		return "", err
+	}
+
+	var buffer bytes.Buffer
+	ok := true
+	for _, v := range config.Git {
+		ok, err = HandleGit(mode, v, run, printOutput, config.Agent.HomeFolder)
+		if !ok && err != nil {
+			buffer.WriteString("\nJob: " + v.Name + " " + err.Error())
+		}
+	}
+	return buffer.String(), nil
 }
