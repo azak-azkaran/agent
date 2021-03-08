@@ -78,7 +78,7 @@ func postUnseal(c *gin.Context) {
 	}
 
 	sealed, err := DoUnseal(msg.Token)
-	if  err != nil {
+	if err != nil {
 		returnErr(err, ERROR_UNSEAL, c)
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -94,12 +94,12 @@ func postSeal(c *gin.Context) {
 	}
 
 	err := DoSeal(msg.Token)
-	if err != nil{
+	if err != nil {
 		returnErr(err, ERROR_SEAL, c)
 		return
 	}
 
-		c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		REST_JSON_MESSAGE: true,
 	})
 }
@@ -208,15 +208,21 @@ func postGit(c *gin.Context) {
 		return
 	}
 
-	str, err := DoGit(msg.Token, msg.Mode, msg.Run, msg.PrintOutput)
+	str, ok, err := DoGit(msg.Token, msg.Mode, msg.Run, msg.PrintOutput)
 	if err != nil {
 		returnErr(err, ERROR_GIT, c)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		REST_JSON_MESSAGE: str,
-	})
+	if ok {
+		c.JSON(http.StatusOK, gin.H{
+			REST_JSON_MESSAGE: str,
+		})
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			REST_JSON_MESSAGE: str,
+		})
+	}
 }
 
 func RunRestServer(address string) (*http.Server, func()) {

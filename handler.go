@@ -179,15 +179,15 @@ func DoBackup(token string, mode string, printOutput bool, debug bool, test bool
 	return HandleBackup(cmd, mode, printOutput, test, run)
 }
 
-func DoGit(token string, mode string, run bool, printOutput bool) ( string,error ){
+func DoGit(token string, mode string, run bool, printOutput bool) ( string,bool,error ){
 	config, err := CreateConfigFromVault(token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil {
-		return "",err
+		return "",false,err
 	}
 
 	err = config.GetGitConfig()
 	if err != nil {
-		return "", err
+		return "", false,err
 	}
 
 	var buffer bytes.Buffer
@@ -198,5 +198,5 @@ func DoGit(token string, mode string, run bool, printOutput bool) ( string,error
 			buffer.WriteString("\nJob: " + v.Name + " " + err.Error())
 		}
 	}
-	return buffer.String(), nil
+	return buffer.String(), ok,nil
 }

@@ -276,6 +276,8 @@ func BackupRepositoryExists(token string) {
 		Sugar.Error(ERROR_UNMARSHAL, err)
 		return
 	}
+
+	err = DoBackup(token,"exist", false,  false, false, true)
 	ok, err := SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
 	if err != nil {
 		return
@@ -309,37 +311,24 @@ func GitCheckout() {
 		return
 	}
 
-	msg := GitMessage{
-		Mode:        "clone",
-		Token:       token,
-		Run:         true,
-		PrintOutput: true,
-	}
-
-	reqBody, err := json.Marshal(msg)
-	if err != nil {
-		Sugar.Error(ERROR_UNMARSHAL, err)
-		return
-	}
-
-	ok, err = SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
+	str,ok, err := DoGit(token, "clone", true,true)
 	if err != nil {
 		Sugar.Error("Error:", err)
 		return
 	}
+	Sugar.Info(str)
+
 	if ok {
 		return
 	} else {
-		msg.Mode = "pull"
-		reqBody, err := json.Marshal(msg)
+		str,_, err = DoGit(token, "pull", true,true)
 		if err != nil {
-			Sugar.Error(ERROR_UNMARSHAL, err)
+			Sugar.Error(err.Error())
 			return
 		}
+	Sugar.Info(str)
 
-		SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
 	}
-
 }
 
 func Start() {
