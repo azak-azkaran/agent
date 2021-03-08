@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
-	"os/exec"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,58 +43,6 @@ type GitMessage struct {
 	PrintOutput bool   `json:"print"`
 }
 
-func HandleGit(mode string, v GitConfig, run bool, printOutput bool, home string) (bool, error) {
-	var job Job
-	switch mode {
-	case "clone":
-		job = CreateJobFromFunction(func() error {
-			return GitClone(v.Rep, v.Directory, home, v.PersonalToken)
-		}, mode+" "+v.Name)
-	case "pull":
-		job = CreateJobFromFunction(func() error {
-			err := GitCreateRemote(v.Directory, home, v.Rep)
-			if err != nil {
-				return err
-			} else {
-				return GitPull(v.Directory, home, v.PersonalToken)
-			}
-		}, mode+" "+v.Name)
-	default:
-		return false, errors.New("Not supported Mode: " + mode)
-	}
-
-	var err error
-
-	if run {
-		err = job.RunJob(printOutput)
-	} else {
-		err = job.RunJobBackground(printOutput)
-	}
-
-	return err == nil, err
-}
-
-func HandleBackup(cmd *exec.Cmd, name string, printOutput bool, test bool, run bool, c *gin.Context) {
-	job := CreateJobFromCommand(cmd, name)
-	var err error
-	if test {
-		err = job.DontRun(printOutput)
-	} else {
-		if run {
-			err = job.RunJob(printOutput)
-		} else {
-			err = job.RunJobBackground(printOutput)
-		}
-	}
-
-	if err != nil {
-		returnErr(err, ERROR_RUNBACKUP, c)
-	} else {
-		c.JSON(http.StatusOK, gin.H{})
-	}
-
-}
-
 func handleError(job Job, err error, errMsg string, buffer bytes.Buffer) bool {
 	if err != nil {
 		m := errMsg + err.Error()
@@ -108,43 +54,6 @@ func handleError(job Job, err error, errMsg string, buffer bytes.Buffer) bool {
 		return false
 	}
 	return true
-}
-
-func HandleMount(job Job, printOutput bool, test bool, run bool, c *gin.Context, buffer bytes.Buffer) bool {
-	var err error
-	if test {
-		err = job.DontRun(printOutput)
-		return handleError(job, err, ERROR_RUNMOUNT, buffer)
-	} else {
-
-		if run {
-			err = job.RunJob(printOutput)
-			return handleError(job, err, ERROR_RUNMOUNT, buffer)
-
-		} else {
-			err = job.RunJobBackground(printOutput)
-			return handleError(job, err, ERROR_RUNMOUNT, buffer)
-		}
-	}
-}
-
-func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool, c *gin.Context, buffer bytes.Buffer) {
-	ok := true
-	for k, v := range cmds {
-		job := CreateJobFromCommand(v, "mount"+strconv.Itoa(k))
-		if !HandleMount(job, printOutput, test, run, c, buffer) {
-			ok = false
-		}
-	}
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			REST_JSON_MESSAGE: buffer.String(),
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			REST_JSON_MESSAGE: buffer.String(),
-		})
-	}
 }
 
 func returnErr(err error, source string, c *gin.Context) {
@@ -168,16 +77,10 @@ func postUnseal(c *gin.Context) {
 		return
 	}
 
-	resp, err := Unseal(AgentConfiguration.VaultConfig, msg.Token)
-	if err != nil {
+	if err := DoUnseal(msg.Token); err != nil {
 		returnErr(err, ERROR_UNSEAL, c)
-		return
 	}
-
-	Sugar.Info(REST_VAULT_SEAL_MESSAGE, resp.Sealed)
-	c.JSON(http.StatusOK, gin.H{
-		REST_JSON_MESSAGE: resp.Sealed,
-	})
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 func postSeal(c *gin.Context) {
@@ -253,29 +156,15 @@ func postMount(c *gin.Context) {
 		return
 	}
 
-	config, err := CreateConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
+	str, err := DoMount(msg.Token, msg.Debug, msg.PrintOutput, msg.Test, msg.Run)
 	if err != nil {
-		returnErr(err, ERROR_CONFIG, c)
-		return
+		c.JSON(http.StatusInternalServerError, gin.H{
+			REST_JSON_MESSAGE: str,
+		})
 	}
-
-	err = config.GetGocryptConfig()
-	if err != nil {
-		returnErr(err, ERROR_CONFIG, c)
-		return
-	}
-
-	out := MountFolders(config.Agent.HomeFolder, config.Gocrypt)
-
-	if msg.Debug {
-		Sugar.Debug("Config", config.Gocrypt)
-		for k, v := range out {
-			Sugar.Info("Command", k, ": ", v.String())
-		}
-	}
-	var buffer bytes.Buffer
-
-	HandleMountFolders(out, msg.PrintOutput, msg.Test, msg.Run, c, buffer)
+	c.JSON(http.StatusOK, gin.H{
+		REST_JSON_MESSAGE: str,
+	})
 }
 
 func postBackup(c *gin.Context) {
@@ -284,87 +173,13 @@ func postBackup(c *gin.Context) {
 		returnErr(err, ERROR_BINDING, c)
 		return
 	}
-
-	config, err := CreateConfigFromVault(msg.Token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
-	if err != nil {
-		returnErr(err, ERROR_CONFIG, c)
-		return
-	}
-
-	err = config.GetResticConfig()
-	if err != nil {
-		returnErr(err, ERROR_CONFIG, c)
-		return
-	}
-
-	var cmd *exec.Cmd
-	switch msg.Mode {
-	case "init":
-		cmd = InitRepo(config.Restic.Environment, config.Agent.HomeFolder)
-	case "exist":
-		cmd = ExistsRepo(config.Restic.Environment, config.Agent.HomeFolder)
-	case "check":
-		cmd = CheckRepo(config.Restic.Environment, config.Agent.HomeFolder)
-	case "backup":
-		cmd = Backup(
-			config.Restic.Path,
-			config.Restic.Environment,
-			config.Agent.HomeFolder,
-			config.Restic.ExcludePath,
-			2000,
-			2000)
-	case "unlock":
-		cmd = UnlockRepo(config.Restic.Environment, config.Agent.HomeFolder)
-	case "list":
-		cmd = ListRepo(config.Restic.Environment, config.Agent.HomeFolder)
-		msg.PrintOutput = true
-	case "forget":
-		cmd = ForgetRep(config.Restic.Environment, config.Agent.HomeFolder)
-	default:
-		returnErr(errors.New("Not supported Mode: "+msg.Mode), ERROR_MODE, c)
-		return
-	}
-	if msg.Debug {
-		Sugar.Debug("Command: ", cmd.String())
-		Sugar.Info("Config", config.Restic)
-	}
-
-	HandleBackup(cmd, msg.Mode, msg.PrintOutput, msg.Test, msg.Run, c)
-
-}
-
-func postToken(c *gin.Context) {
-	var msg TokenMessage
-	if err := c.BindJSON(&msg); err != nil {
-		returnErr(err, ERROR_BINDING, c)
-		return
-	}
-
-	ok, err := PutToken(AgentConfiguration.DB, msg.Token)
-	if err != nil {
-		returnErr(err, ERROR_PUT_TOKEN, c)
-		return
-	}
-
-	if ok {
-		c.JSON(http.StatusOK, gin.H{})
-		return
+	
+	if err := DoBackup(msg.Token, msg.Mode, msg.PrintOutput, msg.Debug, msg.Test, msg.Run) ;err != nil {
+		returnErr(err, ERROR_RUNBACKUP, c)
 	} else {
-		returnErr(errors.New("Storage Error PUT returned false"), ERROR_PUT_TOKEN, c)
-		return
+		c.JSON(http.StatusOK, gin.H{})
 	}
-}
-
-func getToken(c *gin.Context) {
-	token, err := GetToken(AgentConfiguration.DB)
-	if err != nil {
-		returnErr(err, ERROR_PUT_TOKEN, c)
-		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-	})
-}
 
 func postUnsealKey(c *gin.Context) {
 	var msg VaultKeyMessage
@@ -453,7 +268,6 @@ func CreateRestHandler() http.Handler {
 	})
 
 	r.POST("/unsealkey", postUnsealKey)
-	r.POST("/token", postToken)
 	r.POST("/unseal", postUnseal)
 	r.POST("/seal", postSeal)
 	r.POST("/mount", postMount)
@@ -461,7 +275,5 @@ func CreateRestHandler() http.Handler {
 	r.POST("/git", postGit)
 	r.GET("/is_sealed", getIsSealed)
 	r.GET("/status", getStatus)
-	r.GET("/logs", getLog)
-	r.GET("/token", getToken)
 	return r
 }

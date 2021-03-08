@@ -140,27 +140,12 @@ func checkRequirements() (string, bool) {
 		return "", false
 	}
 
-	if AgentConfiguration.useLogin {
 		token, err := Login(AgentConfiguration.VaultConfig, AgentConfiguration.RoleID, AgentConfiguration.SecretID)
 		if err != nil {
 			Sugar.Error("Login failed: ", err)
 			return "", false
 		}
 		return token, true
-	}
-
-	ok := CheckToken(AgentConfiguration.DB)
-	if !ok {
-		Sugar.Warn("Token is not set")
-		return "", false
-	}
-
-	token, err := GetToken(AgentConfiguration.DB)
-	if err != nil {
-		Sugar.Error("Read token failed: ", err)
-		return "", false
-	}
-	return token, true
 }
 
 func CheckBackupRepository() {
@@ -275,7 +260,6 @@ func backup() {
 			UpdateLastBackup(AgentConfiguration.DB, time.Now())
 			return
 		}
-
 	}
 }
 

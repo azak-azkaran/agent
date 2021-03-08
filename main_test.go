@@ -120,10 +120,6 @@ func TestMainStart(t *testing.T) {
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	go fun()
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-
 	Start()
 
 	time.Sleep(1 * time.Millisecond)
@@ -180,14 +176,6 @@ func TestMainMain(t *testing.T) {
 	AgentConfiguration.VaultConfig = testconfig.config
 
 	sendingGet(t, REST_TEST_PING, http.StatusOK)
-
-	sendingPost(t, REST_TEST_TOKEN, http.StatusOK, TokenMessage{
-		Token: "randomtoken",
-	})
-
-	token, err := GetToken(AgentConfiguration.DB)
-	assert.NoError(t, err)
-	assert.Equal(t, "randomtoken", token)
 
 	time.Sleep(10 * time.Second)
 	assert.Eventually(t, checkContents, 120*time.Second, 1*time.Second)
@@ -319,9 +307,6 @@ func TestMainBackupRepositoryExists(t *testing.T) {
 
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 
@@ -371,9 +356,6 @@ func TestMainCheckBackupRepository(t *testing.T) {
 
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
 	go fun()
 
 	time.Sleep(1 * time.Millisecond)
@@ -423,9 +405,6 @@ func TestMainGitCheckout(t *testing.T) {
 
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 

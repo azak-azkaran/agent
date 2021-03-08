@@ -171,29 +171,6 @@ func TestStoreUpdateTimestamp(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestStoreCheckToken(t *testing.T) {
-	fmt.Println("running: TestStoreCheckToken")
-	db := InitDB("", "", true)
-	require.NotNil(t, db)
-
-	ok := CheckToken(db)
-	assert.False(t, ok)
-
-	ok, err := PutToken(db, "testToken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-
-	value, err := GetToken(db)
-	assert.NoError(t, err)
-	assert.Equal(t, "testToken", value)
-
-	ok = CheckToken(db)
-	assert.True(t, ok)
-
-	err = db.Close()
-	assert.NoError(t, err)
-}
-
 func TestStoreCheckSealKey(t *testing.T) {
 	fmt.Println("running: TestStoreGetSealKey")
 	db := InitDB("", "", true)

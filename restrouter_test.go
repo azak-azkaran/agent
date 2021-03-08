@@ -307,7 +307,7 @@ func TestRestStatus(t *testing.T) {
 	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 }
 
-func TestRestGetLog(t *testing.T) {
+func TestRestUnsupported(t *testing.T) {
 	fmt.Println("running: TestRestGetLog")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
@@ -329,7 +329,7 @@ func TestRestGetLog(t *testing.T) {
 	fmt.Println("Sending Body:", string(reqBody))
 	resp, err := http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
@@ -341,40 +341,7 @@ func TestRestGetLog(t *testing.T) {
 	assert.NoError(t, err)
 	bodyString := string(bodyBytes)
 	fmt.Println(bodyString)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	err = AgentConfiguration.DB.Close()
-	assert.NoError(t, err)
-
-	err = server.Shutdown(context.Background())
-	assert.NoError(t, err)
-}
-
-func TestRestPostToken(t *testing.T) {
-	fmt.Println("running: TestRestPostToken")
-	setupRestrouterTest(t)
-	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-
-	go fun()
-	time.Sleep(1 * time.Millisecond)
-
-	tokenMessage := TokenMessage{
-		Token: "randomtoken",
-	}
-	sendingPost(t, REST_TEST_TOKEN, http.StatusOK, tokenMessage)
-
-	resp, err := http.Get(REST_TEST_TOKEN)
-	assert.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	bodyString := string(bodyBytes)
-	assert.Contains(t, bodyString, tokenMessage.Token)
-
-	ok := CheckToken(AgentConfiguration.DB)
-	assert.True(t, ok)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)

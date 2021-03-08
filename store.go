@@ -151,15 +151,6 @@ func CheckToken(db *badger.DB) bool {
 	return true
 }
 
-func GetToken(db *badger.DB) (string, error) {
-	return Get(db, STORE_TOKEN)
-}
-
-func PutToken(db *badger.DB, token string) (bool, error) {
-	Sugar.Info("Adding Token")
-	return Put(db, STORE_TOKEN, token)
-}
-
 func CheckSealKey(db *badger.DB, shares int) bool {
 	for i := 1; i < shares+1; i++ {
 		value, err := Get(db, STORE_KEY+strconv.Itoa(shares))
