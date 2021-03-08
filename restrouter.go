@@ -93,16 +93,13 @@ func postSeal(c *gin.Context) {
 		return
 	}
 
-	AgentConfiguration.Token = msg.Token
-	err := Seal(AgentConfiguration.VaultConfig, AgentConfiguration.Token)
-	if err != nil {
+	err := DoSeal(msg.Token)
+	if err != nil{
 		returnErr(err, ERROR_SEAL, c)
 		return
 	}
 
-	AgentConfiguration.Token = msg.Token
-	Sugar.Info("Vault Sealed")
-	c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 		REST_JSON_MESSAGE: true,
 	})
 }

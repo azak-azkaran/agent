@@ -70,6 +70,7 @@ const (
 	REST_VAULT_SEAL_MESSAGE = "Vault seal is: "
 
 	ERROR_VAULT_SEALED         = "Vault is sealed."
+	ERROR_VAULT_NOT_SEALED     = "Vault is not sealed."
 	ERROR_VAULT_NO_SECRET      = "Vault has no data for this endpoint."
 	ERROR_VAULT_CONFIG_MISSING = "Vault config is missing"
 

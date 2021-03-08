@@ -83,6 +83,23 @@ func HandleMountFolders(cmds []*exec.Cmd, printOutput bool, test bool, run bool)
 
 }
 
+func DoSeal(token string) error{
+	err := Seal(AgentConfiguration.VaultConfig, token)
+	if err != nil {
+		return err
+	}
+	b, err := IsSealed(AgentConfiguration.VaultConfig)
+	if err != nil {
+		return err
+	}
+
+	if b{
+		return nil
+	} else{
+		return errors.New(ERROR_VAULT_NOT_SEALED)
+	}
+}
+
 func DoUnseal(token string) (bool,error ) {
 	resp, err := Unseal(AgentConfiguration.VaultConfig, token)
 	if err != nil {
