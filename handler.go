@@ -109,6 +109,10 @@ func DoUnseal(token string) (bool,error ) {
 	return resp.Sealed, nil
 }
 
+func DoMountVerbose(token string) (string, error) {
+	return DoMount(token,false,true,false,true)
+}
+
 func DoMount(token string, debug bool, printOutput bool, test bool, run bool) (string, error) {
 	config, err := CreateConfigFromVault(token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil {
@@ -133,6 +137,10 @@ func DoMount(token string, debug bool, printOutput bool, test bool, run bool) (s
 	} else {
 		return str, errors.New(ERROR_RUNMOUNT)
 	}
+}
+
+func DoBackupVerbose(token string, mode string) error {
+	return DoBackup(token, mode, true, false,false,true)
 }
 
 func DoBackup(token string, mode string, printOutput bool, debug bool, test bool, run bool) error {
@@ -177,6 +185,10 @@ func DoBackup(token string, mode string, printOutput bool, debug bool, test bool
 		Sugar.Info("Config", config.Restic)
 	}
 	return HandleBackup(cmd, mode, printOutput, test, run)
+}
+
+func DoGitVerbose(token string, mode string)( string,bool,error ){
+	return DoGit(token,mode, true,true)
 }
 
 func DoGit(token string, mode string, run bool, printOutput bool) ( string,bool,error ){
