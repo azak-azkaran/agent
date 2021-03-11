@@ -292,6 +292,7 @@ func ParseConfiguration(confi *Configuration) {
 	} else {
 		confi.Address = "localhost:8081"
 	}
+	confi.useLogin = true
 
 	if viper.IsSet(MAIN_PATHDB) {
 		confi.PathDB = viper.GetString(MAIN_PATHDB)
@@ -334,10 +335,14 @@ func ParseConfiguration(confi *Configuration) {
 
 	if viper.IsSet(MAIN_VAULT_ROLE_ID) {
 		confi.RoleID = viper.GetString(MAIN_VAULT_ROLE_ID)
+	} else {
+		confi.useLogin = false
 	}
 
 	if viper.IsSet(MAIN_VAULT_SECRET_ID) {
 		confi.SecretID = viper.GetString(MAIN_VAULT_SECRET_ID)
+	} else {
+		confi.useLogin = false
 	}
 
 	Sugar.Warn("Agent initalzing on: ", confi.Hostname)
@@ -349,16 +354,7 @@ func ParseConfiguration(confi *Configuration) {
 		"\nVault KeyFile path: ", confi.VaultKeyFile,
 		"\nMount Duration: ", confi.MountDuration,
 		"\nMount AllowOther: ", confi.MountAllow,
+		"\nRoleID: ", confi.RoleID,
+		"\nSecretID: ", confi.SecretID,
 	)
-
-	if (confi.RoleID == "" && confi.SecretID == "") || (confi.RoleID == "" && confi.SecretID != "") || (confi.RoleID != "" && confi.SecretID == "") {
-		confi.RoleID = ""
-		confi.SecretID = ""
-		Sugar.Info("Secret ID and Role ID reset")
-		confi.useLogin = false
-	} else {
-		Sugar.Info("RoleID: ", confi.RoleID)
-		Sugar.Info("SecretID: ", confi.SecretID)
-		confi.useLogin = true
-	}
 }

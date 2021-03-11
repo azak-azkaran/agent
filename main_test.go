@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -43,6 +42,15 @@ func clear() {
 	}
 	os.Remove(test_folder)
 	forbidden = false
+
+
+	os.Remove("AGENT_ADDRESS")
+	os.Remove("AGENT_DURATION")
+	os.Remove("AGENT_PATHDB")
+	os.Remove("AGENT_MOUNT_DURATION")
+	os.Remove("AGENT_MOUNT_ALLOW")
+	os.Remove("AGENT_VAULT_ROLE_ID")
+	os.Remove("AGENT_VAULT_SECRET_ID")
 }
 
 func TestMainInit(t *testing.T) {
@@ -234,57 +242,6 @@ func TestMainCheckKeyFile(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestMainSendRequest(t *testing.T) {
-	fmt.Println("running: TestMainSendRequest")
-	t.Cleanup(clear)
-	gin.SetMode(gin.TestMode)
-
-	msg := TokenMessage{
-		Token: "randomtoken",
-	}
-	req, err := json.Marshal(msg)
-	require.NoError(t, err)
-
-	router := gin.Default()
-	router.POST("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "blub",
-		})
-	})
-	router.POST("/test1", func(c *gin.Context) {
-		var msg VaultKeyMessage
-		if err := c.BindJSON(&msg); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
-
-	})
-	server = &http.Server{
-		Addr:    MAIN_TEST_ADDRESS,
-		Handler: router,
-	}
-	go func() {
-		err := server.ListenAndServe()
-		assert.Equal(t, http.ErrServerClosed, err)
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-	AgentConfiguration.Address = MAIN_TEST_ADDRESS
-
-	ok, err := SendRequest(req, "/test")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-
-	ok, err = SendRequest(req, "/test1")
-	assert.NoError(t, err)
-	assert.False(t, ok)
-
-	err = server.Shutdown(context.Background())
-	assert.NoError(t, err)
-}
-
 func TestMainBackupRepositoryExists(t *testing.T) {
 	fmt.Println("running: TestMainBackupRepositoryExists")
 	t.Cleanup(clear)
@@ -340,6 +297,7 @@ func TestMainBackupRepositoryExists(t *testing.T) {
 func TestMainCheckBackupRepository(t *testing.T) {
 	fmt.Println("running: TestMainCheckBackupRepository")
 	t.Cleanup(clear)
+
 	jobmap = cmap.New()
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
@@ -348,6 +306,9 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
+
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 
@@ -355,9 +316,6 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	AgentConfiguration.DB = InitDB("", "", true)
-	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	go fun()
-
 	time.Sleep(1 * time.Millisecond)
 	CheckBackupRepository()
 

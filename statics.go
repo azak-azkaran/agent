@@ -46,11 +46,13 @@ const (
 	MAIN_ERROR_UNSEAL     = "Error while unsealing vault: "
 	MAIN_ERROR_SHUTDOWN   = "Error shutting down: "
 	MAIN_ERROR_IS_DIR     = "Error provided path is a directory"
+	MAIN_ERROR_LOGIN      = "Error Role and Secret ID are required"
 
 	HOME = "~"
 
 	ERROR_DATABASE_NOT_FOUND = "Database is not initialized"
 	ERROR_DATABASE_CLOSED    = "Database is closed"
+	ERROR_DATABASE_PANIC     = "Database was thrown in panic"
 	ERROR_KEY_NOT_FOUND      = "Key is not found: "
 
 	// Restrouter

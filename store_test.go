@@ -227,10 +227,14 @@ func TestStoreDropSealKeys(t *testing.T) {
 	assert.True(t, ok)
 
 	keys := GetSealKey(db, 1, 1)
-	assert.NotNil(t, keys)
-	assert.Len(t, keys, 1)
+	require.NotNil(t, keys)
+	require.Len(t, keys, 1)
 
-	err = DropSealKeys(db)
+	require.True(t,CheckSealKey(db,1))
+	require.NoError(t, db.Sync())
+	time.Sleep(10 * time.Millisecond)
+
+	err = DropSealKeys(db, 1)
 	assert.NoError(t, err)
 
 	key, err := Get(db, STORE_KEY+"1")
