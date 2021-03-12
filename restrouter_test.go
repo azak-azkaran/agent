@@ -427,7 +427,7 @@ func TestRestPostGit(t *testing.T) {
 }
 
 func TestRestForbidden(t *testing.T) {
-	fmt.Println("running: TestRestPostBackup")
+	fmt.Println("running: TestRestForbidden")
 	t.Cleanup(clear)
 	forbidden = true
 	setupRestrouterTest(t)

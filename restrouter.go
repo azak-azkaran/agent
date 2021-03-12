@@ -117,13 +117,6 @@ func getIsSealed(c *gin.Context) {
 	})
 }
 
-func getLog(c *gin.Context) {
-	Sugar.Info("Log: ", "not implemented")
-	c.JSON(http.StatusOK, gin.H{
-		REST_JSON_MESSAGE: "not implemented",
-	})
-}
-
 func getStatus(c *gin.Context) {
 	if jobmap == nil {
 		returnErr(errors.New("ConcurrentMap not initialized"), ERROR_STATUS, c)
