@@ -423,6 +423,7 @@ func SendRequest(reqBody []byte, endpoint string) (bool, error) {
 }
 
 func main() {
+	StartProfiler()
 	stopChan = make(chan os.Signal, 2)
 	signal.Notify(stopChan, os.Interrupt)
 	go func() {

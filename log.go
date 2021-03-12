@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"github.com/pyroscope-io/pyroscope/pkg/agent/profiler"
 )
 
 var (
@@ -38,6 +39,13 @@ func LogInit() *gin.LoggerConfig {
 		SkipPaths: []string{"/debug/vars"},
 		Output:    GetLogger().Writer(),
 	}
+}
+
+func StartProfiler(){
+  profiler.Start(profiler.Config{
+        ApplicationName: "agent",
+        ServerAddress:   "http://localhost:4040",
+    })
 }
 
 func GetLogger() *log.Logger {
