@@ -149,19 +149,6 @@ func getTimestamp(db *badger.DB, key string) (time.Time, error) {
 	return n, nil
 }
 
-func CheckToken(db *badger.DB) bool {
-	value, err := Get(db, STORE_TOKEN)
-	if err != nil {
-		return false
-	}
-
-	if value == "" {
-		return false
-	}
-
-	return true
-}
-
 func CheckSealKey(db *badger.DB, shares int) bool {
 	for i := 1; i < shares+1; i++ {
 		value, err := Get(db, STORE_KEY+strconv.Itoa(shares))

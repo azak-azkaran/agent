@@ -243,3 +243,23 @@ func TestStoreDropSealKeys(t *testing.T) {
 	keys = GetSealKey(db, 1, 1)
 	assert.Len(t, keys, 0)
 }
+
+func TestStoreRemove(t *testing.T) {
+	fmt.Println("running: TestStoreRemove")
+	db := InitDB("", "", true)
+	require.NotNil(t, db)
+
+	ok, err := Put(db, "test", "test")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	value, err := Get(db, "test")
+	assert.NoError(t, err)
+	assert.Equal(t, value, "test")
+
+	err = Remove(db, "test")
+	assert.NoError(t, err)
+
+	_, err = Get(db, "test")
+	assert.Error(t,err)
+}
