@@ -95,6 +95,8 @@ func TestMainInit(t *testing.T) {
 	os.Setenv("AGENT_DURATION", MAIN_TEST_DURATION)
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 
 	err = Init(testconfig.config, nil)
 	require.NoError(t, err)
@@ -104,7 +106,9 @@ func TestMainInit(t *testing.T) {
 	assert.Equal(t, dur, AgentConfiguration.TimeBetweenStart)
 	assert.Equal(t, false, AgentConfiguration.MountAllow)
 	assert.Equal(t, MAIN_TEST_MOUNT_DURATION, AgentConfiguration.MountDuration)
-	assert.False(t, AgentConfiguration.useLogin)
+	assert.Equal(t, VAULT_TEST_SECRET_ID, AgentConfiguration.SecretID)
+	assert.Equal(t, VAULT_TEST_ROLE_ID, AgentConfiguration.RoleID)
+	assert.True(t, AgentConfiguration.useLogin)
 }
 
 func TestMainStart(t *testing.T) {
@@ -119,6 +123,8 @@ func TestMainStart(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 
@@ -159,6 +165,8 @@ func TestMainMain(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	os.Setenv("AGENT_VAULT_KEY_FILE", MAIN_TEST_KEYFILE_PATH)
 	multipleKey = true
 	sealStatus = true
@@ -252,6 +260,8 @@ func TestMainBackupRepositoryExists(t *testing.T) {
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
@@ -351,6 +361,8 @@ func TestMainGitCheckout(t *testing.T) {
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)

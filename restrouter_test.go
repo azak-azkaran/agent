@@ -27,6 +27,8 @@ func setupRestrouterTest(t *testing.T) {
 	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 

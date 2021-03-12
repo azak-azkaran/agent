@@ -233,13 +233,11 @@ func backup() {
 }
 
 func BackupRepositoryExists(token string) {
-	err := DoBackup(token, "exist", false, false, false, true)
-	if err != nil {
+	err := DoBackup(token, "exist", true, false, false, true)
+	if err == nil {
 		return
 	}
-
 	Sugar.Info(MAIN_MESSAGE_BACKUP_INIT)
-
 	err = DoBackupVerbose(token, "init")
 	if err != nil {
 		Sugar.Error(err)

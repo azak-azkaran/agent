@@ -37,7 +37,7 @@ func InitDB(path string, masterkey string, debug bool) *badger.DB {
 	if debug {
 		Sugar.Warn("Debug is on switching to InMemory")
 
-		opt = badger.DefaultOptions("").WithInMemory(true).WithLogger(&defaultLog{}).WithKeepL0InMemory(true)
+		opt = badger.DefaultOptions("").WithInMemory(true).WithLogger(&defaultLog{})
 	} else {
 		opt = badger.DefaultOptions(path).WithLogger(&defaultLog{})
 	}
