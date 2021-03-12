@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v3"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"

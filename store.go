@@ -9,7 +9,7 @@ import (
 	crypto_rand "crypto/rand"
 	math_rand "math/rand"
 
-	badger "github.com/dgraph-io/badger/v2"
+	badger "github.com/dgraph-io/badger/v3"
 )
 
 var closed = true
