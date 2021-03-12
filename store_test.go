@@ -171,29 +171,6 @@ func TestStoreUpdateTimestamp(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestStoreCheckToken(t *testing.T) {
-	fmt.Println("running: TestStoreCheckToken")
-	db := InitDB("", "", true)
-	require.NotNil(t, db)
-
-	ok := CheckToken(db)
-	assert.False(t, ok)
-
-	ok, err := PutToken(db, "testToken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-
-	value, err := GetToken(db)
-	assert.NoError(t, err)
-	assert.Equal(t, "testToken", value)
-
-	ok = CheckToken(db)
-	assert.True(t, ok)
-
-	err = db.Close()
-	assert.NoError(t, err)
-}
-
 func TestStoreCheckSealKey(t *testing.T) {
 	fmt.Println("running: TestStoreGetSealKey")
 	db := InitDB("", "", true)
@@ -250,10 +227,14 @@ func TestStoreDropSealKeys(t *testing.T) {
 	assert.True(t, ok)
 
 	keys := GetSealKey(db, 1, 1)
-	assert.NotNil(t, keys)
-	assert.Len(t, keys, 1)
+	require.NotNil(t, keys)
+	require.Len(t, keys, 1)
 
-	err = DropSealKeys(db)
+	require.True(t,CheckSealKey(db,1))
+	require.NoError(t, db.Sync())
+	time.Sleep(10 * time.Millisecond)
+
+	err = DropSealKeys(db, 1)
 	assert.NoError(t, err)
 
 	key, err := Get(db, STORE_KEY+"1")
@@ -261,4 +242,24 @@ func TestStoreDropSealKeys(t *testing.T) {
 	assert.Equal(t, "", key)
 	keys = GetSealKey(db, 1, 1)
 	assert.Len(t, keys, 0)
+}
+
+func TestStoreRemove(t *testing.T) {
+	fmt.Println("running: TestStoreRemove")
+	db := InitDB("", "", true)
+	require.NotNil(t, db)
+
+	ok, err := Put(db, "test", "test")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+
+	value, err := Get(db, "test")
+	assert.NoError(t, err)
+	assert.Equal(t, value, "test")
+
+	err = Remove(db, "test")
+	assert.NoError(t, err)
+
+	_, err = Get(db, "test")
+	assert.Error(t,err)
 }

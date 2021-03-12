@@ -67,7 +67,6 @@ func Get(db *badger.DB, key string) (string, error) {
 		if err != nil {
 			return err
 		}
-		// Alternatively, you could also use item.ValueCopy().
 		valCopy, err = item.ValueCopy(nil)
 		if err != nil {
 			return err
@@ -95,15 +94,27 @@ func Put(db *badger.DB, key string, value string) (bool, error) {
 		if err != nil {
 			return err
 		}
-		//err = txn.Commit()
-		//if err != nil {
-		//	return err
-		//}
 		ok = true
 		return nil
 	})
 
 	return ok, err
+}
+
+func Remove(db *badger.DB, key string) ( error) {
+	if db == nil {
+		return  errors.New(ERROR_DATABASE_NOT_FOUND)
+	}
+	if closed {
+		return  errors.New(ERROR_DATABASE_CLOSED)
+	}
+	err := db.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(key))
+	})
+	if err != nil {
+		return  err
+	}
+	return  nil
 }
 
 func UpdateLastBackup(db *badger.DB, timestamp time.Time) (bool, error) {
@@ -138,28 +149,6 @@ func getTimestamp(db *badger.DB, key string) (time.Time, error) {
 	return n, nil
 }
 
-func CheckToken(db *badger.DB) bool {
-	value, err := Get(db, STORE_TOKEN)
-	if err != nil {
-		return false
-	}
-
-	if value == "" {
-		return false
-	}
-
-	return true
-}
-
-func GetToken(db *badger.DB) (string, error) {
-	return Get(db, STORE_TOKEN)
-}
-
-func PutToken(db *badger.DB, token string) (bool, error) {
-	Sugar.Info("Adding Token")
-	return Put(db, STORE_TOKEN, token)
-}
-
 func CheckSealKey(db *badger.DB, shares int) bool {
 	for i := 1; i < shares+1; i++ {
 		value, err := Get(db, STORE_KEY+strconv.Itoa(shares))
@@ -172,16 +161,24 @@ func CheckSealKey(db *badger.DB, shares int) bool {
 		}
 	}
 	return true
-
 }
 
-func DropSealKeys(db *badger.DB) error {
+func PutSealKey(db *badger.DB, key string, shares int) (bool, error) {
+	Sugar.Info("Adding seal key, ", shares)
+	return Put(db, STORE_KEY+strconv.Itoa(shares), key)
+}
+
+func DropSealKeys(db *badger.DB, length int) error {
 	if db == nil {
 		return errors.New(ERROR_DATABASE_NOT_FOUND)
 	}
 	if closed {
 		return errors.New(ERROR_DATABASE_CLOSED)
 	}
+	if err := db.Sync(); err != nil {
+		return err
+	}
+
 	err := db.DropPrefix([]byte(STORE_KEY))
 	if err != nil {
 		return err
@@ -192,11 +189,6 @@ func DropSealKeys(db *badger.DB) error {
 		return errors.New(STORE_ERROR_NOT_DROPED)
 	}
 	return nil
-}
-
-func PutSealKey(db *badger.DB, key string, shares int) (bool, error) {
-	Sugar.Info("Adding seal key, ", shares)
-	return Put(db, STORE_KEY+strconv.Itoa(shares), key)
 }
 
 func GetSealKey(db *badger.DB, threshold int, totalShares int) []string {

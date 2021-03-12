@@ -2,10 +2,7 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 
 	vault "github.com/hashicorp/vault/api"
@@ -16,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
 
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -55,8 +53,19 @@ func bindEnviorment() error {
 		return err
 	}
 
+	err = viper.BindEnv(MAIN_VAULT_ROLE_ID)
+	if err != nil {
+		return err
+	}
+
+	err = viper.BindEnv(MAIN_VAULT_SECRET_ID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
+
 func Init(vaultConfig *vault.Config, args []string) error {
 	jobmap = cmap.New()
 	addressCommend := pflag.NewFlagSet("agent", pflag.ContinueOnError)
@@ -96,6 +105,9 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	}
 
 	ParseConfiguration(&config)
+	if !config.useLogin {
+		return errors.New(MAIN_ERROR_LOGIN)
+	}
 	AgentConfiguration = config
 	return nil
 }
@@ -126,12 +138,11 @@ func CheckKeyFile(path string) error {
 	for k, v := range keys {
 		_, err = PutSealKey(AgentConfiguration.DB, v, k+1)
 		if err != nil {
-			DropSealKeys(AgentConfiguration.DB)
+			DropSealKeys(AgentConfiguration.DB, k+1)
 			return err
 		}
 	}
 	return nil
-	//return errors.New("Not implemented yet")
 }
 
 func checkRequirements() (string, bool) {
@@ -140,24 +151,9 @@ func checkRequirements() (string, bool) {
 		return "", false
 	}
 
-	if AgentConfiguration.useLogin {
-		token, err := Login(AgentConfiguration.VaultConfig, AgentConfiguration.RoleID, AgentConfiguration.SecretID)
-		if err != nil {
-			Sugar.Error("Login failed: ", err)
-			return "", false
-		}
-		return token, true
-	}
-
-	ok := CheckToken(AgentConfiguration.DB)
-	if !ok {
-		Sugar.Warn("Token is not set")
-		return "", false
-	}
-
-	token, err := GetToken(AgentConfiguration.DB)
+	token, err := Login(AgentConfiguration.VaultConfig, AgentConfiguration.RoleID, AgentConfiguration.SecretID)
 	if err != nil {
-		Sugar.Error("Read token failed: ", err)
+		Sugar.Error("Login failed: ", err)
 		return "", false
 	}
 	return token, true
@@ -180,34 +176,19 @@ func CheckBackupRepository() {
 	Sugar.Info("Next Backup Check after: ", t.String())
 	if now.After(t) {
 		BackupRepositoryExists(token)
-		backupMsg := BackupMessage{
-			Mode:        "check",
-			Token:       token,
-			PrintOutput: true,
-			Run:         true,
-		}
 
-		reqBody, err := json.Marshal(backupMsg)
+		err := DoBackupVerbose(token, "check")
 		if err != nil {
-			Sugar.Error(ERROR_UNMARSHAL, err)
+			Sugar.Error(err)
 			return
 		}
 
-		ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+		_, err = UpdateTimestamp(AgentConfiguration.DB, time.Now())
 		if err != nil {
-			return
+			Sugar.Error(err)
 		}
-		if ok {
-			_, err = UpdateTimestamp(AgentConfiguration.DB, time.Now())
-			if err != nil {
-				Sugar.Error(err)
-			}
-			return
-		}
-	} else {
-		Sugar.Info(MAIN_MESSAGE_BACKUP_ALREADY, t.String())
+		return
 	}
-
 }
 
 func mountFolders() {
@@ -216,24 +197,12 @@ func mountFolders() {
 		return
 	}
 
-	mountMsg := MountMessage{
-		Token: token,
-		Run:   true,
-	}
-
-	reqBody, err := json.Marshal(mountMsg)
+	str, err := DoMountVerbose(token)
 	if err != nil {
-		Sugar.Error(ERROR_UNMARSHAL, err)
+		Sugar.Error(err)
 		return
 	}
-
-	ok, err = SendRequest(reqBody, MAIN_POST_MOUNT_ENDPOINT)
-	if err != nil {
-		return
-	}
-	if !ok {
-		return
-	}
+	Sugar.Info(str)
 }
 
 func backup() {
@@ -253,68 +222,25 @@ func backup() {
 	Sugar.Info("Next Backup after: ", t.String())
 	if now.After(t) {
 		BackupRepositoryExists(token)
-		backupMsg := BackupMessage{
-			Mode:        "backup",
-			Token:       token,
-			PrintOutput: true,
-			Run:         true,
-		}
-
-		reqBody, err := json.Marshal(backupMsg)
+		err = DoBackupVerbose(token, "backup")
 		if err != nil {
-			Sugar.Error(ERROR_UNMARSHAL, err)
+			Sugar.Error(err)
 			return
 		}
-
-		ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
-		if err != nil {
-			return
-		}
-		if ok {
-			Sugar.Info(MAIN_MESSAGE_BACKUP_SUCCESS)
-			UpdateLastBackup(AgentConfiguration.DB, time.Now())
-			return
-		}
-
+		Sugar.Info(MAIN_MESSAGE_BACKUP_SUCCESS)
+		UpdateLastBackup(AgentConfiguration.DB, time.Now())
 	}
 }
 
 func BackupRepositoryExists(token string) {
-	backupMsg := BackupMessage{
-		Mode:        "exist",
-		Token:       token,
-		Run:         true,
-		PrintOutput: false,
-	}
-
-	reqBody, err := json.Marshal(backupMsg)
-	if err != nil {
-		Sugar.Error(ERROR_UNMARSHAL, err)
+	err := DoBackup(token, "exist", true, false, false, true)
+	if err == nil {
 		return
 	}
-	ok, err := SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
-	if err != nil {
-		return
-	}
-	if ok {
-		return
-	}
-
 	Sugar.Info(MAIN_MESSAGE_BACKUP_INIT)
-	backupMsg.Mode = "init"
-	backupMsg.PrintOutput = true
-	reqBody, err = json.Marshal(backupMsg)
-	if err != nil {
-		Sugar.Error(ERROR_UNMARSHAL, err)
-		return
-	}
-
-	ok, err = SendRequest(reqBody, MAIN_POST_BACKUP_ENDPOINT)
+	err = DoBackupVerbose(token, "init")
 	if err != nil {
 		Sugar.Error(err)
-		return
-	}
-	if ok {
 		return
 	}
 }
@@ -325,37 +251,24 @@ func GitCheckout() {
 		return
 	}
 
-	msg := GitMessage{
-		Mode:        "clone",
-		Token:       token,
-		Run:         true,
-		PrintOutput: true,
-	}
-
-	reqBody, err := json.Marshal(msg)
-	if err != nil {
-		Sugar.Error(ERROR_UNMARSHAL, err)
-		return
-	}
-
-	ok, err = SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
+	str, ok, err := DoGit(token, "clone", true, true)
 	if err != nil {
 		Sugar.Error("Error:", err)
 		return
 	}
+	Sugar.Info(str)
+
 	if ok {
 		return
 	} else {
-		msg.Mode = "pull"
-		reqBody, err := json.Marshal(msg)
+		str, _, err = DoGit(token, "pull", true, true)
 		if err != nil {
-			Sugar.Error(ERROR_UNMARSHAL, err)
+			Sugar.Error(err.Error())
 			return
 		}
+		Sugar.Info(str)
 
-		SendRequest(reqBody, MAIN_POST_GIT_ENDPOINT)
 	}
-
 }
 
 func Start() {
@@ -398,28 +311,6 @@ func run() {
 		AgentConfiguration.Timer = time.AfterFunc(AgentConfiguration.TimeBetweenStart, run)
 	}
 
-}
-
-func SendRequest(reqBody []byte, endpoint string) (bool, error) {
-	resp, err := http.Post(MAIN_POST_HTTP+AgentConfiguration.Address+endpoint,
-		MAIN_POST_DATA_TYPE, bytes.NewBuffer(reqBody))
-	if err != nil {
-		Sugar.Error(ERROR_SENDING_REQUEST, err)
-		return false, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			Sugar.Error(ERROR_READING_RESPONSE, err)
-			return false, err
-		}
-		bodyString := string(bodyBytes)
-		Sugar.Error("Error while sending to:", endpoint, ": ", bodyString)
-		return false, nil
-	}
-	return true, nil
 }
 
 func main() {

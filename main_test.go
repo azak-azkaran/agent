@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -43,6 +42,15 @@ func clear() {
 	}
 	os.Remove(test_folder)
 	forbidden = false
+
+
+	os.Remove("AGENT_ADDRESS")
+	os.Remove("AGENT_DURATION")
+	os.Remove("AGENT_PATHDB")
+	os.Remove("AGENT_MOUNT_DURATION")
+	os.Remove("AGENT_MOUNT_ALLOW")
+	os.Remove("AGENT_VAULT_ROLE_ID")
+	os.Remove("AGENT_VAULT_SECRET_ID")
 }
 
 func TestMainInit(t *testing.T) {
@@ -87,6 +95,8 @@ func TestMainInit(t *testing.T) {
 	os.Setenv("AGENT_DURATION", MAIN_TEST_DURATION)
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 
 	err = Init(testconfig.config, nil)
 	require.NoError(t, err)
@@ -96,7 +106,9 @@ func TestMainInit(t *testing.T) {
 	assert.Equal(t, dur, AgentConfiguration.TimeBetweenStart)
 	assert.Equal(t, false, AgentConfiguration.MountAllow)
 	assert.Equal(t, MAIN_TEST_MOUNT_DURATION, AgentConfiguration.MountDuration)
-	assert.False(t, AgentConfiguration.useLogin)
+	assert.Equal(t, VAULT_TEST_SECRET_ID, AgentConfiguration.SecretID)
+	assert.Equal(t, VAULT_TEST_ROLE_ID, AgentConfiguration.RoleID)
+	assert.True(t, AgentConfiguration.useLogin)
 }
 
 func TestMainStart(t *testing.T) {
@@ -111,6 +123,8 @@ func TestMainStart(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 
@@ -120,10 +134,6 @@ func TestMainStart(t *testing.T) {
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
 	go fun()
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-
 	Start()
 
 	time.Sleep(1 * time.Millisecond)
@@ -155,6 +165,8 @@ func TestMainMain(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	os.Setenv("AGENT_VAULT_KEY_FILE", MAIN_TEST_KEYFILE_PATH)
 	multipleKey = true
 	sealStatus = true
@@ -180,14 +192,6 @@ func TestMainMain(t *testing.T) {
 	AgentConfiguration.VaultConfig = testconfig.config
 
 	sendingGet(t, REST_TEST_PING, http.StatusOK)
-
-	sendingPost(t, REST_TEST_TOKEN, http.StatusOK, TokenMessage{
-		Token: "randomtoken",
-	})
-
-	token, err := GetToken(AgentConfiguration.DB)
-	assert.NoError(t, err)
-	assert.Equal(t, "randomtoken", token)
 
 	time.Sleep(10 * time.Second)
 	assert.Eventually(t, checkContents, 120*time.Second, 1*time.Second)
@@ -246,57 +250,6 @@ func TestMainCheckKeyFile(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestMainSendRequest(t *testing.T) {
-	fmt.Println("running: TestMainSendRequest")
-	t.Cleanup(clear)
-	gin.SetMode(gin.TestMode)
-
-	msg := TokenMessage{
-		Token: "randomtoken",
-	}
-	req, err := json.Marshal(msg)
-	require.NoError(t, err)
-
-	router := gin.Default()
-	router.POST("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "blub",
-		})
-	})
-	router.POST("/test1", func(c *gin.Context) {
-		var msg VaultKeyMessage
-		if err := c.BindJSON(&msg); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
-
-	})
-	server = &http.Server{
-		Addr:    MAIN_TEST_ADDRESS,
-		Handler: router,
-	}
-	go func() {
-		err := server.ListenAndServe()
-		assert.Equal(t, http.ErrServerClosed, err)
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-	AgentConfiguration.Address = MAIN_TEST_ADDRESS
-
-	ok, err := SendRequest(req, "/test")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-
-	ok, err = SendRequest(req, "/test1")
-	assert.NoError(t, err)
-	assert.False(t, ok)
-
-	err = server.Shutdown(context.Background())
-	assert.NoError(t, err)
-}
-
 func TestMainBackupRepositoryExists(t *testing.T) {
 	fmt.Println("running: TestMainBackupRepositoryExists")
 	t.Cleanup(clear)
@@ -307,6 +260,8 @@ func TestMainBackupRepositoryExists(t *testing.T) {
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
@@ -319,9 +274,6 @@ func TestMainBackupRepositoryExists(t *testing.T) {
 
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 
@@ -355,6 +307,7 @@ func TestMainBackupRepositoryExists(t *testing.T) {
 func TestMainCheckBackupRepository(t *testing.T) {
 	fmt.Println("running: TestMainCheckBackupRepository")
 	t.Cleanup(clear)
+
 	jobmap = cmap.New()
 	gin.SetMode(gin.TestMode)
 	testconfig := readConfig(t)
@@ -363,6 +316,9 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
+
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 
@@ -370,12 +326,6 @@ func TestMainCheckBackupRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	AgentConfiguration.DB = InitDB("", "", true)
-	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
-	go fun()
-
 	time.Sleep(1 * time.Millisecond)
 	CheckBackupRepository()
 
@@ -411,6 +361,8 @@ func TestMainGitCheckout(t *testing.T) {
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
 	os.Setenv("AGENT_MOUNT_DURATION", MAIN_TEST_MOUNT_DURATION)
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	os.Setenv("AGENT_MOUNT_ALLOW", MAIN_TEST_MOUNT_ALLOW)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
@@ -423,9 +375,6 @@ func TestMainGitCheckout(t *testing.T) {
 
 	AgentConfiguration.DB = InitDB("", "", true)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-	ok, err := PutToken(AgentConfiguration.DB, "randomtoken")
-	assert.NoError(t, err)
-	assert.True(t, ok)
 	go fun()
 	time.Sleep(1 * time.Millisecond)
 

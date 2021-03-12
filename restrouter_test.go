@@ -27,6 +27,8 @@ func setupRestrouterTest(t *testing.T) {
 	os.Setenv("AGENT_ADDRESS", MAIN_TEST_ADDRESS)
 	os.Setenv("AGENT_DURATION", testconfig.Duration)
 	os.Setenv("AGENT_PATHDB", "./test/DB")
+	os.Setenv("AGENT_VAULT_ROLE_ID", VAULT_TEST_ROLE_ID)
+	os.Setenv("AGENT_VAULT_SECRET_ID", VAULT_TEST_SECRET_ID)
 	err := Init(testconfig.config, os.Args)
 	require.NoError(t, err)
 
@@ -307,7 +309,7 @@ func TestRestStatus(t *testing.T) {
 	assert.NoFileExists(t, BACKUP_TEST_CONF_FILE)
 }
 
-func TestRestGetLog(t *testing.T) {
+func TestRestUnsupported(t *testing.T) {
 	fmt.Println("running: TestRestGetLog")
 	setupRestrouterTest(t)
 	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
@@ -329,7 +331,7 @@ func TestRestGetLog(t *testing.T) {
 	fmt.Println("Sending Body:", string(reqBody))
 	resp, err := http.Post(REST_TEST_BACKUP,
 		"application/json", bytes.NewBuffer(reqBody))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
@@ -341,40 +343,7 @@ func TestRestGetLog(t *testing.T) {
 	assert.NoError(t, err)
 	bodyString := string(bodyBytes)
 	fmt.Println(bodyString)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	err = AgentConfiguration.DB.Close()
-	assert.NoError(t, err)
-
-	err = server.Shutdown(context.Background())
-	assert.NoError(t, err)
-}
-
-func TestRestPostToken(t *testing.T) {
-	fmt.Println("running: TestRestPostToken")
-	setupRestrouterTest(t)
-	server, fun := RunRestServer(MAIN_TEST_ADDRESS)
-
-	go fun()
-	time.Sleep(1 * time.Millisecond)
-
-	tokenMessage := TokenMessage{
-		Token: "randomtoken",
-	}
-	sendingPost(t, REST_TEST_TOKEN, http.StatusOK, tokenMessage)
-
-	resp, err := http.Get(REST_TEST_TOKEN)
-	assert.NoError(t, err)
-	defer resp.Body.Close()
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	bodyString := string(bodyBytes)
-	assert.Contains(t, bodyString, tokenMessage.Token)
-
-	ok := CheckToken(AgentConfiguration.DB)
-	assert.True(t, ok)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	err = AgentConfiguration.DB.Close()
 	assert.NoError(t, err)
@@ -420,7 +389,6 @@ func TestRestBindings(t *testing.T) {
 	msg := DummyMessage{
 		Message: "test",
 	}
-	sendingPost(t, REST_TEST_TOKEN, http.StatusBadRequest, msg)
 	sendingPost(t, REST_TEST_UNSEAL_KEY, http.StatusBadRequest, msg)
 	sendingPost(t, REST_TEST_UNSEAL, http.StatusBadRequest, msg)
 	sendingPost(t, REST_TEST_BACKUP, http.StatusBadRequest, msg)
@@ -459,7 +427,7 @@ func TestRestPostGit(t *testing.T) {
 }
 
 func TestRestForbidden(t *testing.T) {
-	fmt.Println("running: TestRestPostBackup")
+	fmt.Println("running: TestRestForbidden")
 	t.Cleanup(clear)
 	forbidden = true
 	setupRestrouterTest(t)
@@ -476,7 +444,7 @@ func TestRestForbidden(t *testing.T) {
 		PrintOutput: true,
 		Token:       "randomtoken",
 	}
-	sendingPost(t, REST_TEST_BACKUP, http.StatusForbidden, msg)
+	sendingPost(t, REST_TEST_BACKUP, http.StatusInternalServerError, msg)
 
 	err := server.Shutdown(context.Background())
 	assert.NoError(t, err)
