@@ -7,6 +7,19 @@ import (
 	"strconv"
 )
 
+func handleError(job Job, err error, errMsg string, buffer bytes.Buffer) bool {
+	if err != nil {
+		m := errMsg + err.Error()
+		if job.Stderr != nil {
+			m = "\t" + job.Stderr.String()
+		}
+		Sugar.Error(m)
+		buffer.WriteString(m)
+		return false
+	}
+	return true
+}
+
 func HandleGit(mode string, v GitConfig, run bool, printOutput bool, home string) (bool, error) {
 	var job Job
 	switch mode {

@@ -43,19 +43,6 @@ type GitMessage struct {
 	PrintOutput bool   `json:"print"`
 }
 
-func handleError(job Job, err error, errMsg string, buffer bytes.Buffer) bool {
-	if err != nil {
-		m := errMsg + err.Error()
-		if job.Stderr != nil {
-			m = "\t" + job.Stderr.String()
-		}
-		Sugar.Error(m)
-		buffer.WriteString(m)
-		return false
-	}
-	return true
-}
-
 func returnErr(err error, source string, c *gin.Context) {
 	Sugar.Error(source, err.Error())
 
