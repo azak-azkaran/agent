@@ -156,6 +156,10 @@ func DoBackupVerbose(token string, mode string) error {
 	return DoBackup(token, mode, true, false,false,true)
 }
 
+func DoBackupSilent(token string, mode string) error {
+	return DoBackup(token, mode, false, false,false,true)
+}
+
 func DoBackup(token string, mode string, printOutput bool, debug bool, test bool, run bool) error {
 	config, err := CreateConfigFromVault(token, AgentConfiguration.Hostname, AgentConfiguration.VaultConfig)
 	if err != nil {

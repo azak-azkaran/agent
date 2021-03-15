@@ -177,7 +177,7 @@ func CheckBackupRepository() {
 	if now.After(t) {
 		BackupRepositoryExists(token)
 
-		err := DoBackupVerbose(token, "check")
+		err := DoBackupSilent(token, "check")
 		if err != nil {
 			Sugar.Error(err)
 			return
@@ -233,7 +233,7 @@ func backup() {
 }
 
 func BackupRepositoryExists(token string) {
-	err := DoBackup(token, "exist", true, false, false, true)
+	err := DoBackupSilent(token, "exist")
 	if err == nil {
 		return
 	}
