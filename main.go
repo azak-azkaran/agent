@@ -63,6 +63,11 @@ func bindEnviorment() error {
 		return err
 	}
 
+	err = viper.BindEnv(MAIN_BACKUP)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -78,6 +83,7 @@ func Init(vaultConfig *vault.Config, args []string) error {
 	addressCommend.String(MAIN_VAULT_ADDRESS, "https://localhost:8200", "The address to the vault server")
 	addressCommend.String(MAIN_VAULT_ROLE_ID, "", "Role ID for AppRole login into Vault")
 	addressCommend.String(MAIN_VAULT_SECRET_ID, "", "Secret ID for AppRole login into Vault")
+	addressCommend.String(MAIN_BACKUP, "true", "Do backup yes = true")
 
 	err := bindEnviorment()
 	if err != nil {
@@ -275,10 +281,14 @@ func Start() {
 	Sugar.Warn("Waking from Sleep")
 	mountFolders()
 	GitCheckout()
-	backup()
-	CheckBackupRepository()
-
-	Sugar.Warn("Going to Sleep")
+	if AgentConfiguration.backup {
+		backup()
+		CheckBackupRepository()
+		Sugar.Warn("Going to Sleep")
+	} else{
+		Sugar.Warn("Exiting since backup is disabled")
+		os.Exit(0)
+	}
 }
 
 func unsealVault(seal *vault.SealStatusResponse) {

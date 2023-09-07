@@ -30,6 +30,7 @@ type Configuration struct {
 	RoleID           string
 	SecretID         string
 	useLogin         bool
+	backup           bool
 }
 
 type AgentConfig struct {
@@ -344,6 +345,12 @@ func ParseConfiguration(confi *Configuration) {
 	} else {
 		confi.useLogin = false
 	}
+	
+	if viper.IsSet(MAIN_BACKUP) {
+		confi.backup = viper.GetBool(MAIN_BACKUP)
+	} else {
+		confi.backup = true
+	}
 
 	Sugar.Warn("Agent initalzing on: ", confi.Hostname)
 	Sugar.Info("Agent Configuration:",
@@ -356,5 +363,6 @@ func ParseConfiguration(confi *Configuration) {
 		"\nMount AllowOther: ", confi.MountAllow,
 		"\nRoleID: ", confi.RoleID,
 		"\nSecretID: ", confi.SecretID,
+		"\nBackup: ", confi.backup,
 	)
 }

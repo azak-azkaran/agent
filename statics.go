@@ -27,6 +27,7 @@ const (
 	MAIN_VAULT_ADDRESS   = "vault_address"
 	MAIN_VAULT_SECRET_ID = "vault_secret_id"
 	MAIN_VAULT_ROLE_ID   = "vault_role_id"
+	MAIN_BACKUP				   = "do_backup"
 
 	MAIN_MESSAGE_NOT_ENOUGH_KEYS  = "Not enough vault keys in storage"
 	MAIN_MESSAGE_START_UNSEAL     = "Starting to unseal Vault"
